@@ -7,9 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatDate } from '@/lib/utils'
-import {
-  Map, FileText, ClipboardList, Users, TrendingUp, Clock, CheckCircle2, XCircle,
-} from 'lucide-react'
+import { ClipboardList, CheckCircle2, RotateCcw } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 
 const STATUS_BADGE = {
@@ -73,10 +71,10 @@ export default function Dashboard() {
 
       {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Parcels" value={data?.total_parcels} icon={Map} desc={`${data?.registered_parcels ?? '—'} registered`} />
-        <StatCard title="Active Deeds" value={data?.active_deeds} icon={FileText} color="bg-blue-100 text-blue-600" />
-        <StatCard title="Registered Owners" value={data?.total_owners} icon={Users} color="bg-purple-100 text-purple-600" />
-        <StatCard title="In Progress" value={data ? (data.step1_applications + data.step2_applications + data.step3_applications) : undefined} icon={ClipboardList} color="bg-yellow-100 text-yellow-600" desc={`${data?.returned_applications ?? '—'} returned`} />
+        <StatCard title="Total Applications" value={data?.total_applications} icon={ClipboardList} />
+        <StatCard title="In Progress" value={data ? (data.step1_applications + data.step2_applications + data.step3_applications) : undefined} icon={ClipboardList} color="bg-yellow-100 text-yellow-600" desc="across all steps" />
+        <StatCard title="Returned" value={data?.returned_applications} icon={RotateCcw} color="bg-red-100 text-red-600" desc="awaiting correction" />
+        <StatCard title="Approved" value={data?.approved_applications} icon={CheckCircle2} color="bg-green-100 text-green-600" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

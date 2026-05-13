@@ -41,8 +41,8 @@ export default function Parcels() {
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [filterDistrict, setFilterDistrict] = useState('')
-  const [filterStatus, setFilterStatus] = useState('')
+  const [filterDistrict, setFilterDistrict] = useState('all')
+  const [filterStatus, setFilterStatus] = useState('all')
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(EMPTY)
@@ -53,8 +53,8 @@ export default function Parcels() {
     setLoading(true)
     parcelApi.list({
       search: search || undefined,
-      district: filterDistrict || undefined,
-      status: filterStatus || undefined,
+      district: filterDistrict !== 'all' ? filterDistrict : undefined,
+      status: filterStatus !== 'all' ? filterStatus : undefined,
     })
       .then((r) => setData(r.data.results || r.data))
       .finally(() => setLoading(false))
@@ -109,14 +109,14 @@ export default function Parcels() {
           <Select value={filterDistrict} onValueChange={setFilterDistrict}>
             <SelectTrigger className="w-48"><SelectValue placeholder="All districts" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All districts</SelectItem>
+              <SelectItem value="all">All districts</SelectItem>
               {DISTRICTS.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={filterStatus} onValueChange={setFilterStatus}>
             <SelectTrigger className="w-40"><SelectValue placeholder="All statuses" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All statuses</SelectItem>
+              <SelectItem value="all">All statuses</SelectItem>
               {STATUSES.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
             </SelectContent>
           </Select>

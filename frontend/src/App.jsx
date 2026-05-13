@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { Component } from 'react'
 import PrivateRoute from '@/components/PrivateRoute'
 import Layout from '@/components/Layout'
 import Login from '@/pages/Login'
@@ -8,10 +9,31 @@ import Deeds from '@/pages/Deeds'
 import Applications from '@/pages/Applications'
 import Owners from '@/pages/Owners'
 
+class ErrorBoundary extends Component {
+  state = { error: null }
+  static getDerivedStateFromError(error) { return { error } }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="flex h-screen items-center justify-center p-8 text-center">
+          <div>
+            <p className="text-lg font-semibold text-destructive mb-2">Something went wrong</p>
+            <p className="text-sm text-muted-foreground mb-4">{this.state.error.message}</p>
+            <button className="text-sm underline" onClick={() => this.setState({ error: null })}>Try again</button>
+          </div>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+
 function ProtectedLayout({ children }) {
   return (
     <PrivateRoute>
-      <Layout>{children}</Layout>
+      <Layout>
+        <ErrorBoundary>{children}</ErrorBoundary>
+      </Layout>
     </PrivateRoute>
   )
 }

@@ -40,7 +40,7 @@ export default function Applications() {
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [filterStatus, setFilterStatus] = useState('')
+  const [filterStatus, setFilterStatus] = useState('all')
   // New application dialog
   const [newOpen, setNewOpen] = useState(false)
   const [form, setForm] = useState(EMPTY_APP)
@@ -56,7 +56,7 @@ export default function Applications() {
 
   const load = useCallback(() => {
     setLoading(true)
-    appsApi.list({ search: search || undefined, status: filterStatus || undefined })
+    appsApi.list({ search: search || undefined, status: filterStatus !== 'all' ? filterStatus : undefined })
       .then((r) => setData(r.data.results || r.data))
       .finally(() => setLoading(false))
   }, [search, filterStatus])
@@ -122,7 +122,7 @@ export default function Applications() {
           <Select value={filterStatus} onValueChange={setFilterStatus}>
             <SelectTrigger className="w-44"><SelectValue placeholder="All statuses" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All statuses</SelectItem>
+              <SelectItem value="all">All statuses</SelectItem>
               {STATUSES.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
             </SelectContent>
           </Select>

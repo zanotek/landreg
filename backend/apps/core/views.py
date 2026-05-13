@@ -11,7 +11,8 @@ from .serializers import (
     OwnerSerializer,
     LandParcelListSerializer, LandParcelDetailSerializer,
     TitleDeedListSerializer, TitleDeedWriteSerializer,
-    ApplicationListSerializer, ApplicationWriteSerializer, ApplicationReviewSerializer,
+    ApplicationListSerializer,
+    ApplicationStep1Serializer, ApplicationStep2Serializer, ApplicationStep3Serializer,
 )
 
 
@@ -59,8 +60,10 @@ class StatsView(APIView):
             'registered_parcels': LandParcel.objects.filter(status='registered').count(),
             'active_deeds': TitleDeed.objects.filter(status='active').count(),
             'total_owners': Owner.objects.count(),
-            'pending_applications': Application.objects.filter(status='pending').count(),
-            'under_review_applications': Application.objects.filter(status='under_review').count(),
+            'step1_applications': Application.objects.filter(status='step1').count(),
+            'step2_applications': Application.objects.filter(status='step2').count(),
+            'step3_applications': Application.objects.filter(status='step3').count(),
+            'returned_applications': Application.objects.filter(status='returned').count(),
             'approved_applications': Application.objects.filter(status='approved').count(),
             'total_applications': Application.objects.count(),
         })
@@ -161,7 +164,7 @@ class TitleDeedViewSet(viewsets.ModelViewSet):
 
 class ApplicationViewSet(viewsets.ModelViewSet):
     queryset = Application.objects.select_related(
-        'parcel', 'submitted_by', 'reviewed_by'
+        'parcel', 'step1_by', 'step2_by', 'step3_by'
     ).all()
     permission_classes = [IsAdminOrOfficer]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
@@ -171,7 +174,7 @@ class ApplicationViewSet(viewsets.ModelViewSet):
 
     def get_serializer_class(self):
         if self.action in ('create', 'update', 'partial_update'):
-            return ApplicationWriteSerializer
+            return ApplicationStep1Serializer
         return ApplicationListSerializer
 
     def get_queryset(self):
@@ -185,12 +188,39 @@ class ApplicationViewSet(viewsets.ModelViewSet):
         return qs
 
     def perform_create(self, serializer):
-        serializer.save(submitted_by=self.request.user)
+        serializer.save(status='step1')
 
-    @action(detail=True, methods=['patch'], url_path='review')
-    def review(self, request, pk=None):
-        application = self.get_object()
-        serializer = ApplicationReviewSerializer(application, data=request.data, partial=True)
+    @action(detail=True, methods=['patch'], url_path='submit-step1')
+    def submit_step1(self, request, pk=None):
+        """Data Entry Officer submits Step 1, advancing to Step 2."""
+        app = self.get_object()
+        serializer = ApplicationStep1Serializer(app, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        serializer.save(reviewed_by=request.user, reviewed_at=timezone.now())
-        return Response(ApplicationListSerializer(application).data)
+        serializer.save(status='step2', step1_by=request.user, step1_at=timezone.now())
+        return Response(ApplicationListSerializer(app).data)
+
+    @action(detail=True, methods=['patch'], url_path='submit-step2')
+    def submit_step2(self, request, pk=None):
+        """Reviewing Officer submits Step 2. Can advance to Step 3 or return to Step 1."""
+        app = self.get_object()
+        serializer = ApplicationStep2Serializer(app, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        returned_to = request.data.get('returned_to_step')
+        if returned_to:
+            serializer.save(status='returned')
+        else:
+            serializer.save(status='step3', step2_by=request.user, step2_at=timezone.now())
+        return Response(ApplicationListSerializer(app).data)
+
+    @action(detail=True, methods=['patch'], url_path='submit-step3')
+    def submit_step3(self, request, pk=None):
+        """Registrar approves or returns the application."""
+        app = self.get_object()
+        serializer = ApplicationStep3Serializer(app, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        returned_to = request.data.get('returned_to_step')
+        if returned_to:
+            serializer.save(status='returned')
+        else:
+            serializer.save(status='approved', step3_by=request.user, step3_at=timezone.now())
+        return Response(ApplicationListSerializer(app).data)

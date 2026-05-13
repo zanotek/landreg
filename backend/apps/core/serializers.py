@@ -23,7 +23,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 class UserCreateSerializer(serializers.ModelSerializer):
     role = serializers.ChoiceField(
-        choices=UserProfile.ROLE_CHOICES, write_only=True, default='officer'
+        choices=UserProfile.ROLE_CHOICES, write_only=True, default='data_entry'
     )
     phone = serializers.CharField(write_only=True, required=False, allow_blank=True)
     password = serializers.CharField(write_only=True, min_length=8)
@@ -33,7 +33,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
         fields = ['username', 'email', 'first_name', 'last_name', 'password', 'role', 'phone']
 
     def create(self, validated_data):
-        role = validated_data.pop('role', 'officer')
+        role = validated_data.pop('role', 'data_entry')
         phone = validated_data.pop('phone', '')
         password = validated_data.pop('password')
         user = User.objects.create_user(password=password, **validated_data)
@@ -41,7 +41,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
         return user
 
 
-# ── Owner ────────────────────────────────────────────────────────────────────
+# ── Owner ─────────────────────────────────────────────────────────────────────
 
 class OwnerSerializer(serializers.ModelSerializer):
     full_name = serializers.ReadOnlyField()
@@ -131,47 +131,87 @@ class TitleDeedWriteSerializer(serializers.ModelSerializer):
 
 # ── Application ───────────────────────────────────────────────────────────────
 
+def _officer_name(user):
+    if user:
+        return user.get_full_name() or user.username
+    return None
+
+
 class ApplicationListSerializer(serializers.ModelSerializer):
     application_type_display = serializers.CharField(
         source='get_application_type_display', read_only=True
     )
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     parcel_number = serializers.CharField(source='parcel.parcel_number', read_only=True)
-    reviewed_by_name = serializers.SerializerMethodField()
+    step1_by_name = serializers.SerializerMethodField()
+    step2_by_name = serializers.SerializerMethodField()
+    step3_by_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Application
         fields = [
-            'id', 'application_number', 'applicant_name', 'applicant_national_id',
-            'applicant_phone', 'applicant_email', 'application_type', 'application_type_display',
-            'parcel', 'parcel_number', 'parcel_number_requested', 'description',
-            'status', 'status_display', 'reviewed_by_name',
-            'submitted_at', 'reviewed_at', 'rejection_reason', 'notes',
+            # Identity
+            'id', 'application_number',
+            # Step 1 — property
+            'application_type', 'application_type_display',
+            'parcel', 'parcel_number', 'parcel_number_requested',
+            'ward', 'village_or_block', 'encumbrances', 'description',
+            # Step 1 — proprietorship
+            'applicant_name', 'applicant_national_id', 'applicant_phone',
+            'applicant_email', 'applicant_address',
+            'ownership_type', 'co_proprietors', 'scanned_deed_url',
+            # Step 2
+            'registration_number', 'volume_ref', 'folio_ref',
+            'registration_entry_date', 'instrument_type', 'reviewer_notes',
+            # Step 3
+            'registrar_notes',
+            # Workflow
+            'status', 'status_display',
+            'returned_to_step', 'return_reason',
+            # Tracking
+            'step1_by', 'step1_by_name', 'step1_at',
+            'step2_by', 'step2_by_name', 'step2_at',
+            'step3_by', 'step3_by_name', 'step3_at',
+            'submitted_at', 'updated_at',
         ]
 
-    def get_reviewed_by_name(self, obj):
-        if obj.reviewed_by:
-            return obj.reviewed_by.get_full_name() or obj.reviewed_by.username
-        return None
+    def get_step1_by_name(self, obj):
+        return _officer_name(obj.step1_by)
+
+    def get_step2_by_name(self, obj):
+        return _officer_name(obj.step2_by)
+
+    def get_step3_by_name(self, obj):
+        return _officer_name(obj.step3_by)
 
 
-class ApplicationWriteSerializer(serializers.ModelSerializer):
+class ApplicationStep1Serializer(serializers.ModelSerializer):
+    """Written by the Data Entry Officer."""
     class Meta:
         model = Application
         fields = [
-            'applicant_name', 'applicant_national_id', 'applicant_phone', 'applicant_email',
-            'application_type', 'parcel', 'parcel_number_requested', 'description',
-            'status', 'rejection_reason', 'notes',
+            'application_type', 'parcel', 'parcel_number_requested',
+            'ward', 'village_or_block', 'encumbrances', 'description',
+            'applicant_name', 'applicant_national_id', 'applicant_phone',
+            'applicant_email', 'applicant_address',
+            'ownership_type', 'co_proprietors', 'scanned_deed_url',
         ]
 
 
-class ApplicationReviewSerializer(serializers.ModelSerializer):
+class ApplicationStep2Serializer(serializers.ModelSerializer):
+    """Written by the Reviewing Officer."""
     class Meta:
         model = Application
-        fields = ['status', 'rejection_reason', 'notes']
+        fields = [
+            'registration_number', 'volume_ref', 'folio_ref',
+            'registration_entry_date', 'instrument_type', 'reviewer_notes',
+            # Allow returning the record
+            'returned_to_step', 'return_reason',
+        ]
 
-    def validate_status(self, value):
-        allowed = ('under_review', 'approved', 'rejected', 'cancelled')
-        if value not in allowed:
-            raise serializers.ValidationError(f"Status must be one of: {', '.join(allowed)}")
-        return value
+
+class ApplicationStep3Serializer(serializers.ModelSerializer):
+    """Written by the Registrar."""
+    class Meta:
+        model = Application
+        fields = ['registrar_notes', 'returned_to_step', 'return_reason']

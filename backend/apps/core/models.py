@@ -6,11 +6,12 @@ from django.contrib.auth.models import User
 class UserProfile(models.Model):
     ROLE_CHOICES = [
         ('admin', 'Administrator'),
-        ('officer', 'Registration Officer'),
-        ('public', 'Public User'),
+        ('data_entry', 'Data Entry Officer'),
+        ('reviewing_officer', 'Reviewing Officer'),
+        ('registrar', 'Registrar'),
     ]
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='officer')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='data_entry')
     phone = models.CharField(max_length=20, blank=True)
 
     def __str__(self):
@@ -120,7 +121,6 @@ class TitleDeed(models.Model):
         return f"Deed {self.deed_number}"
 
     def save(self, *args, **kwargs):
-        # When a deed is activated, mark the parcel as registered
         if self.status == 'active' and self.pk:
             LandParcel.objects.filter(pk=self.parcel_id).update(status='registered')
         super().save(*args, **kwargs)
@@ -130,43 +130,97 @@ class Application(models.Model):
     TYPE_CHOICES = [
         ('new_registration', 'New Registration'),
         ('transfer', 'Transfer of Ownership'),
-        ('subdivision', 'Subdivision'),
-        ('correction', 'Correction of Records'),
-        ('cancellation', 'Cancellation'),
+        ('subdivision', 'Subdivision & Amalgamation'),
+        ('mortgage', 'Mortgage & Charge'),
+        ('correction', 'Correction & Amendment'),
     ]
     STATUS_CHOICES = [
-        ('pending', 'Pending'),
-        ('under_review', 'Under Review'),
+        ('step1', 'Step 1 – Data Entry'),
+        ('step2', 'Step 2 – Under Review'),
+        ('step3', 'Step 3 – Pending Approval'),
+        ('returned', 'Returned for Correction'),
         ('approved', 'Approved'),
         ('rejected', 'Rejected'),
         ('cancelled', 'Cancelled'),
     ]
+    OWNERSHIP_CHOICES = [
+        ('sole', 'Sole Ownership'),
+        ('joint', 'Joint Ownership'),
+        ('company', 'Company'),
+    ]
+    INSTRUMENT_CHOICES = [
+        ('first_registration', 'First Registration'),
+        ('transfer', 'Transfer'),
+        ('charge', 'Charge / Mortgage'),
+        ('discharge', 'Discharge'),
+        ('subdivision', 'Subdivision'),
+        ('amalgamation', 'Amalgamation'),
+        ('correction', 'Correction'),
+    ]
 
     application_number = models.CharField(max_length=50, unique=True, blank=True)
-    # Applicant details
-    applicant_name = models.CharField(max_length=200)
-    applicant_national_id = models.CharField(max_length=50)
-    applicant_phone = models.CharField(max_length=20)
-    applicant_email = models.EmailField(blank=True)
-    # Application details
+
+    # ── Step 1: Property Information ──────────────────────────────────────────
     application_type = models.CharField(max_length=30, choices=TYPE_CHOICES)
     parcel = models.ForeignKey(
         LandParcel, on_delete=models.SET_NULL, null=True, blank=True, related_name='applications'
     )
     parcel_number_requested = models.CharField(max_length=50, blank=True)
-    description = models.TextField()
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    # Tracking
-    submitted_by = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, related_name='applications_submitted'
+    ward = models.CharField(max_length=100, blank=True)
+    village_or_block = models.CharField(max_length=100, blank=True)
+    encumbrances = models.TextField(blank=True, help_text='Encumbrances or restrictions on the deed')
+    description = models.TextField(blank=True)
+
+    # ── Step 1: Proprietorship Information ───────────────────────────────────
+    applicant_name = models.CharField(max_length=200)
+    applicant_national_id = models.CharField(max_length=50)
+    applicant_phone = models.CharField(max_length=20)
+    applicant_email = models.EmailField(blank=True)
+    applicant_address = models.TextField(blank=True)
+    ownership_type = models.CharField(
+        max_length=10, choices=OWNERSHIP_CHOICES, default='sole', blank=True
     )
-    reviewed_by = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, blank=True, related_name='applications_reviewed'
+    co_proprietors = models.TextField(
+        blank=True, help_text='Names and ID details of co-proprietors (for joint ownership)'
     )
+    scanned_deed_url = models.URLField(
+        blank=True, help_text='URL or path of the scanned title deed attachment'
+    )
+
+    # ── Step 2: Registration Information (filled by Reviewing Officer) ────────
+    registration_number = models.CharField(max_length=50, blank=True, unique=True, null=True)
+    volume_ref = models.CharField(max_length=50, blank=True)
+    folio_ref = models.CharField(max_length=50, blank=True)
+    registration_entry_date = models.DateField(null=True, blank=True)
+    instrument_type = models.CharField(
+        max_length=20, choices=INSTRUMENT_CHOICES, blank=True
+    )
+    reviewer_notes = models.TextField(blank=True, help_text='Notes or flags for the Registrar')
+
+    # ── Step 3: Registrar ─────────────────────────────────────────────────────
+    registrar_notes = models.TextField(blank=True)
+
+    # ── Workflow status & return handling ─────────────────────────────────────
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='step1')
+    returned_to_step = models.IntegerField(null=True, blank=True)
+    return_reason = models.TextField(blank=True)
+
+    # ── Per-step officer tracking ─────────────────────────────────────────────
+    step1_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name='applications_step1'
+    )
+    step1_at = models.DateTimeField(null=True, blank=True)
+    step2_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name='applications_step2'
+    )
+    step2_at = models.DateTimeField(null=True, blank=True)
+    step3_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name='applications_step3'
+    )
+    step3_at = models.DateTimeField(null=True, blank=True)
+
     submitted_at = models.DateTimeField(auto_now_add=True)
-    reviewed_at = models.DateTimeField(null=True, blank=True)
-    rejection_reason = models.TextField(blank=True)
-    notes = models.TextField(blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['-submitted_at']

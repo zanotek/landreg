@@ -13,8 +13,10 @@ import {
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 
 const STATUS_BADGE = {
-  pending: { label: 'Pending', variant: 'warning' },
-  under_review: { label: 'Under Review', variant: 'info' },
+  step1: { label: 'Step 1 – Data Entry', variant: 'warning' },
+  step2: { label: 'Step 2 – Under Review', variant: 'info' },
+  step3: { label: 'Step 3 – Pending Approval', variant: 'secondary' },
+  returned: { label: 'Returned', variant: 'destructive' },
   approved: { label: 'Approved', variant: 'success' },
   rejected: { label: 'Rejected', variant: 'destructive' },
   cancelled: { label: 'Cancelled', variant: 'secondary' },
@@ -55,8 +57,9 @@ export default function Dashboard() {
   }, [])
 
   const chartData = data ? [
-    { name: 'Pending', value: data.pending_applications, fill: '#f59e0b' },
-    { name: 'Under Review', value: data.under_review_applications, fill: '#3b82f6' },
+    { name: 'Step 1', value: data.step1_applications, fill: '#f59e0b' },
+    { name: 'Step 2', value: data.step2_applications, fill: '#3b82f6' },
+    { name: 'Step 3', value: data.step3_applications, fill: '#8b5cf6' },
     { name: 'Approved', value: data.approved_applications, fill: '#10b981' },
   ] : []
 
@@ -73,7 +76,7 @@ export default function Dashboard() {
         <StatCard title="Total Parcels" value={data?.total_parcels} icon={Map} desc={`${data?.registered_parcels ?? '—'} registered`} />
         <StatCard title="Active Deeds" value={data?.active_deeds} icon={FileText} color="bg-blue-100 text-blue-600" />
         <StatCard title="Registered Owners" value={data?.total_owners} icon={Users} color="bg-purple-100 text-purple-600" />
-        <StatCard title="Pending Applications" value={data?.pending_applications} icon={ClipboardList} color="bg-yellow-100 text-yellow-600" />
+        <StatCard title="In Progress" value={data ? (data.step1_applications + data.step2_applications + data.step3_applications) : undefined} icon={ClipboardList} color="bg-yellow-100 text-yellow-600" desc={`${data?.returned_applications ?? '—'} returned`} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

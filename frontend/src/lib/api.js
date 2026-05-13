@@ -84,6 +84,8 @@ export const applications = {
   get: (id) => api.get(`/applications/${id}/`),
   create: (data) => api.post('/applications/', data),
   update: (id, data) => api.patch(`/applications/${id}/`, data),
-  review: (id, data) => api.patch(`/applications/${id}/review/`, data),
+  submitStep1: (id, data) => api.patch(`/applications/${id}/submit-step1/`, data),
+  submitStep2: (id, data) => api.patch(`/applications/${id}/submit-step2/`, data),
+  submitStep3: (id, data) => api.patch(`/applications/${id}/submit-step3/`, data),
   delete: (id) => api.delete(`/applications/${id}/`),
 }

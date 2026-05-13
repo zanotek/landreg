@@ -11,8 +11,8 @@ services:
     runtime: python
     plan: free
     rootDir: backend
-    buildCommand: "./build.sh"
-    startCommand: "gunicorn landreg_project.wsgi:application --workers 2 --bind 0.0.0.0:$PORT"
+    buildCommand: "bash build.sh"
+    startCommand: "gunicorn landreg_project.wsgi:application --workers 1 --bind 0.0.0.0:$PORT --timeout 120 --preload"
     healthCheckPath: /health/
     envVars:
       - key: DATABASE_URL

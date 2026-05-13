@@ -1,6 +1,9 @@
 import axios from 'axios'
 
-const BASE_URL = import.meta.env.VITE_API_URL || '/api'
+// VITE_API_URL is the backend root (e.g. https://landreg-api.onrender.com).
+// Append /api so every helper below can use short paths like /parcels/.
+const _root = import.meta.env.VITE_API_URL || ''
+const BASE_URL = _root ? `${_root.replace(/\/$/, '')}/api` : '/api'
 
 const api = axios.create({ baseURL: BASE_URL })
 

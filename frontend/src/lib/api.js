@@ -87,3 +87,43 @@ export const applications = {
   review: (id, data) => api.patch(`/applications/${id}/review/`, data),
   delete: (id) => api.delete(`/applications/${id}/`),
 }
+
+// Assistant uses fetch directly for SSE streaming
+export const assistantStream = async (messages, onChunk, onDone, onError) => {
+  const token = localStorage.getItem('access_token')
+  const url = `${BASE_URL}/assistant/`
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ messages }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      onError(err.error || 'Request failed')
+      return
+    }
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop()
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue
+        const payload = line.slice(6)
+        if (payload === '[DONE]') { onDone(); return }
+        try { onChunk(JSON.parse(payload).text) } catch { /* ignore */ }
+      }
+    }
+    onDone()
+  } catch (err) {
+    onError(err.message || 'Network error')
+  }
+}

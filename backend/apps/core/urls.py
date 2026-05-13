@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
-    MeView, StatsView,
+    MeView, StatsView, AssistantView,
     UserViewSet, OwnerViewSet, LandParcelViewSet,
     TitleDeedViewSet, ApplicationViewSet,
 )
@@ -16,5 +16,6 @@ router.register(r'applications', ApplicationViewSet, basename='application')
 urlpatterns = [
     path('me/', MeView.as_view(), name='me'),
     path('stats/', StatsView.as_view(), name='stats'),
+    path('assistant/', AssistantView.as_view(), name='assistant'),
     path('', include(router.urls)),
 ]

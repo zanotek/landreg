@@ -56,7 +56,7 @@ const STATUS_LABEL = Object.fromEntries(STATUSES)
 
 const EMPTY_STEP1 = {
   application_type: 'new_registration',
-  parcel: '',
+  parcel: 'none',
   parcel_number_requested: '',
   ward: '',
   village_or_block: '',
@@ -161,7 +161,7 @@ export default function Applications() {
   const handleCreate = async (e) => {
     e.preventDefault(); setSaving(true); setCreateError('')
     try {
-      const payload = { ...step1Form, parcel: step1Form.parcel ? Number(step1Form.parcel) : null }
+      const payload = { ...step1Form, parcel: step1Form.parcel && step1Form.parcel !== 'none' ? Number(step1Form.parcel) : null }
       await appsApi.create(payload)
       setNewOpen(false); load()
     } catch (err) {
@@ -217,7 +217,7 @@ export default function Applications() {
     try {
       await appsApi.submitStep1(selected.id, {
         ...step1Form,
-        parcel: step1Form.parcel ? Number(step1Form.parcel) : null,
+        parcel: step1Form.parcel && step1Form.parcel !== 'none' ? Number(step1Form.parcel) : null,
       })
       setViewOpen(false); load()
     } catch (err) {
@@ -368,14 +368,14 @@ export default function Applications() {
                   <Select value={step1Form.parcel} onValueChange={s1v('parcel')}>
                     <SelectTrigger><SelectValue placeholder="Select parcel (optional)" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="none">None</SelectItem>
                       {allParcels.map((p) => (
                         <SelectItem key={p.id} value={String(p.id)}>{p.parcel_number} — {p.district_display}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-                {!step1Form.parcel && (
+                {(!step1Form.parcel || step1Form.parcel === 'none') && (
                   <div className="space-y-1.5">
                     <Label>Requested Parcel Number</Label>
                     <Input value={step1Form.parcel_number_requested} onChange={s1('parcel_number_requested')} placeholder="e.g. ZNZ-MJN-001" />
@@ -496,14 +496,14 @@ export default function Applications() {
                       <Select value={step1Form.parcel} onValueChange={s1v('parcel')}>
                         <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">None</SelectItem>
+                          <SelectItem value="none">None</SelectItem>
                           {allParcels.map((p) => (
                             <SelectItem key={p.id} value={String(p.id)}>{p.parcel_number} — {p.district_display}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
-                    {!step1Form.parcel && (
+                    {(!step1Form.parcel || step1Form.parcel === 'none') && (
                       <div className="space-y-1.5">
                         <Label>Requested Parcel Number</Label>
                         <Input value={step1Form.parcel_number_requested} onChange={s1('parcel_number_requested')} />

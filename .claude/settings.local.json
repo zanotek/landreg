@@ -3,7 +3,14 @@
     "allow": [
       "Bash(git init *)",
       "Bash(python -c ' *)",
-      "Bash(python3 -m py_compile /Users/livinglab/landreg/backend/apps/core/models.py /Users/livinglab/landreg/backend/apps/core/serializers.py /Users/livinglab/landreg/backend/apps/core/views.py /Users/livinglab/landreg/backend/apps/core/urls.py /Users/livinglab/landreg/backend/landreg_project/settings.py)"
+      "Bash(python3 -m py_compile /Users/livinglab/landreg/backend/apps/core/models.py /Users/livinglab/landreg/backend/apps/core/serializers.py /Users/livinglab/landreg/backend/apps/core/views.py /Users/livinglab/landreg/backend/apps/core/urls.py /Users/livinglab/landreg/backend/landreg_project/settings.py)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git rm *)",
+      "Skill(claude-api)",
+      "Bash(python3 *)",
+      "Bash(git commit *)"
     ]
   }
 }

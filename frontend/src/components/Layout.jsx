@@ -6,7 +6,6 @@ import {
   LayoutDashboard, Map, FileText, ClipboardList, Users, LogOut, Building2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import AssistantWidget from '@/components/AssistantWidget'
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -87,7 +86,6 @@ export default function Layout({ children }) {
         <div className="p-8">{children}</div>
       </main>
 
-      <AssistantWidget />
     </div>
   )
 }

@@ -1,7 +1,18 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
-from .models import UserProfile, Owner, LandParcel, TitleDeed, Application
+from .models import (
+    UserProfile, LandParcel, Application,
+    Proprietor, ApplicationReview, ApplicationApproval,
+)
 
+
+def _officer_name(user):
+    if user:
+        return user.get_full_name() or user.username
+    return None
+
+
+# ── User ──────────────────────────────────────────────────────────────────────
 
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
@@ -41,26 +52,9 @@ class UserCreateSerializer(serializers.ModelSerializer):
         return user
 
 
-# ── Owner ─────────────────────────────────────────────────────────────────────
-
-class OwnerSerializer(serializers.ModelSerializer):
-    full_name = serializers.ReadOnlyField()
-    deed_count = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Owner
-        fields = [
-            'id', 'national_id', 'first_name', 'last_name', 'full_name',
-            'phone', 'email', 'address', 'deed_count', 'created_at',
-        ]
-
-    def get_deed_count(self, obj):
-        return obj.deeds.filter(status='active').count()
-
-
 # ── Land Parcel ───────────────────────────────────────────────────────────────
 
-class LandParcelListSerializer(serializers.ModelSerializer):
+class LandParcelSerializer(serializers.ModelSerializer):
     district_display = serializers.CharField(source='get_district_display', read_only=True)
     land_use_display = serializers.CharField(source='get_land_use_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
@@ -69,149 +63,169 @@ class LandParcelListSerializer(serializers.ModelSerializer):
         model = LandParcel
         fields = [
             'id', 'parcel_number', 'district', 'district_display',
-            'area_sqm', 'land_use', 'land_use_display', 'status', 'status_display',
-            'location_description', 'created_at',
+            'area_sqm', 'land_use', 'land_use_display',
+            'location_description', 'ward', 'village_or_block', 'encumbrances',
+            'status', 'status_display', 'created_at',
         ]
 
 
-class LandParcelDetailSerializer(LandParcelListSerializer):
-    deeds = serializers.SerializerMethodField()
+class LandParcelWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LandParcel
+        fields = [
+            'parcel_number', 'district', 'area_sqm', 'land_use',
+            'location_description', 'ward', 'village_or_block', 'encumbrances',
+        ]
 
-    class Meta(LandParcelListSerializer.Meta):
-        fields = LandParcelListSerializer.Meta.fields + ['deeds', 'updated_at']
 
-    def get_deeds(self, obj):
-        return TitleDeedListSerializer(obj.deeds.all(), many=True).data
+# ── Proprietor ────────────────────────────────────────────────────────────────
 
-
-# ── Title Deed ────────────────────────────────────────────────────────────────
-
-class TitleDeedListSerializer(serializers.ModelSerializer):
-    parcel_number = serializers.CharField(source='parcel.parcel_number', read_only=True)
-    owner_name = serializers.CharField(source='owner.full_name', read_only=True)
-    owner_national_id = serializers.CharField(source='owner.national_id', read_only=True)
-    status_display = serializers.CharField(source='get_status_display', read_only=True)
-    registered_by_name = serializers.SerializerMethodField()
+class ProprietorSerializer(serializers.ModelSerializer):
+    id_type_display = serializers.CharField(source='get_id_type_display', read_only=True)
 
     class Meta:
-        model = TitleDeed
+        model = Proprietor
         fields = [
-            'id', 'deed_number', 'parcel', 'parcel_number',
-            'owner', 'owner_name', 'owner_national_id',
-            'registration_date', 'expiry_date', 'status', 'status_display',
-            'registered_by_name', 'notes', 'created_at',
+            'id', 'full_name', 'national_id', 'id_type', 'id_type_display',
+            'phone', 'email', 'address', 'is_primary',
         ]
 
-    def get_registered_by_name(self, obj):
-        if obj.registered_by:
-            return obj.registered_by.get_full_name() or obj.registered_by.username
-        return None
 
+# ── ApplicationReview ─────────────────────────────────────────────────────────
 
-class TitleDeedWriteSerializer(serializers.ModelSerializer):
+class ApplicationReviewSerializer(serializers.ModelSerializer):
+    reviewed_by_name = serializers.SerializerMethodField()
+    instrument_type_display = serializers.CharField(
+        source='get_instrument_type_display', read_only=True
+    )
+
     class Meta:
-        model = TitleDeed
+        model = ApplicationReview
         fields = [
-            'deed_number', 'parcel', 'owner', 'registration_date',
-            'expiry_date', 'status', 'notes',
+            'registration_number', 'volume_ref', 'folio_ref',
+            'registration_entry_date', 'instrument_type', 'instrument_type_display',
+            'reviewer_notes', 'reviewed_by_name', 'reviewed_at',
         ]
 
-    def validate(self, data):
-        parcel = data.get('parcel')
-        if parcel and data.get('status', 'active') == 'active':
-            existing = TitleDeed.objects.filter(parcel=parcel, status='active')
-            if self.instance:
-                existing = existing.exclude(pk=self.instance.pk)
-            if existing.exists():
-                raise serializers.ValidationError(
-                    {'parcel': 'This parcel already has an active title deed.'}
-                )
-        return data
+    def get_reviewed_by_name(self, obj):
+        return _officer_name(obj.reviewed_by)
+
+
+class ApplicationReviewWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ApplicationReview
+        fields = [
+            'registration_number', 'volume_ref', 'folio_ref',
+            'registration_entry_date', 'instrument_type', 'reviewer_notes',
+        ]
+
+
+# ── ApplicationApproval ───────────────────────────────────────────────────────
+
+class ApplicationApprovalSerializer(serializers.ModelSerializer):
+    approved_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ApplicationApproval
+        fields = ['registrar_notes', 'approved_by_name', 'approved_at']
+
+    def get_approved_by_name(self, obj):
+        return _officer_name(obj.approved_by)
+
+
+class ApplicationApprovalWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ApplicationApproval
+        fields = ['registrar_notes']
 
 
 # ── Application ───────────────────────────────────────────────────────────────
-
-def _officer_name(user):
-    if user:
-        return user.get_full_name() or user.username
-    return None
-
 
 class ApplicationListSerializer(serializers.ModelSerializer):
     application_type_display = serializers.CharField(
         source='get_application_type_display', read_only=True
     )
     status_display = serializers.CharField(source='get_status_display', read_only=True)
-    parcel_number = serializers.CharField(source='parcel.parcel_number', read_only=True)
+    ownership_type_display = serializers.CharField(
+        source='get_ownership_type_display', read_only=True
+    )
     step1_by_name = serializers.SerializerMethodField()
-    step2_by_name = serializers.SerializerMethodField()
-    step3_by_name = serializers.SerializerMethodField()
+    parcel_detail = LandParcelSerializer(source='parcel', read_only=True)
+    parcel_number = serializers.CharField(source='parcel.parcel_number', read_only=True)
+
+    # Nested relations
+    proprietors = ProprietorSerializer(many=True, read_only=True)
+    review = ApplicationReviewSerializer(read_only=True)
+    approval = ApplicationApprovalSerializer(read_only=True)
 
     class Meta:
         model = Application
         fields = [
-            # Identity
             'id', 'application_number',
-            # Step 1 — property
             'application_type', 'application_type_display',
-            'parcel', 'parcel_number', 'parcel_number_requested',
-            'ward', 'village_or_block', 'encumbrances', 'description',
-            # Step 1 — proprietorship
-            'applicant_name', 'applicant_national_id', 'applicant_phone',
-            'applicant_email', 'applicant_address',
-            'ownership_type', 'co_proprietors', 'scanned_deed_url',
-            # Step 2
-            'registration_number', 'volume_ref', 'folio_ref',
-            'registration_entry_date', 'instrument_type', 'reviewer_notes',
-            # Step 3
-            'registrar_notes',
-            # Workflow
+            'parcel', 'parcel_number', 'parcel_detail',
+            'parcel_number_requested',
+            'ownership_type', 'ownership_type_display',
+            'scanned_deed_url', 'description',
             'status', 'status_display',
             'returned_to_step', 'return_reason',
-            # Tracking
             'step1_by', 'step1_by_name', 'step1_at',
-            'step2_by', 'step2_by_name', 'step2_at',
-            'step3_by', 'step3_by_name', 'step3_at',
             'submitted_at', 'updated_at',
+            # Nested
+            'proprietors', 'review', 'approval',
         ]
 
     def get_step1_by_name(self, obj):
         return _officer_name(obj.step1_by)
 
-    def get_step2_by_name(self, obj):
-        return _officer_name(obj.step2_by)
-
-    def get_step3_by_name(self, obj):
-        return _officer_name(obj.step3_by)
-
 
 class ApplicationStep1Serializer(serializers.ModelSerializer):
-    """Written by the Data Entry Officer."""
+    """Handles create and Step 1 edits. Accepts nested proprietors and optional new_parcel."""
+    proprietors = ProprietorSerializer(many=True)
+    new_parcel = LandParcelWriteSerializer(required=False, allow_null=True, write_only=True)
+
     class Meta:
         model = Application
         fields = [
             'application_type', 'parcel', 'parcel_number_requested',
-            'ward', 'village_or_block', 'encumbrances', 'description',
-            'applicant_name', 'applicant_national_id', 'applicant_phone',
-            'applicant_email', 'applicant_address',
-            'ownership_type', 'co_proprietors', 'scanned_deed_url',
+            'ownership_type', 'scanned_deed_url', 'description',
+            'proprietors', 'new_parcel',
         ]
 
+    def validate(self, data):
+        proprietors = data.get('proprietors', [])
+        primary_count = sum(1 for p in proprietors if p.get('is_primary'))
+        if proprietors and primary_count != 1:
+            raise serializers.ValidationError(
+                {'proprietors': 'Exactly one proprietor must be marked is_primary=true.'}
+            )
+        return data
 
-class ApplicationStep2Serializer(serializers.ModelSerializer):
-    """Written by the Reviewing Officer."""
-    class Meta:
-        model = Application
-        fields = [
-            'registration_number', 'volume_ref', 'folio_ref',
-            'registration_entry_date', 'instrument_type', 'reviewer_notes',
-            # Allow returning the record
-            'returned_to_step', 'return_reason',
-        ]
+    def _handle_parcel(self, validated_data):
+        new_parcel_data = validated_data.pop('new_parcel', None)
+        if new_parcel_data and not validated_data.get('parcel'):
+            request = self.context.get('request')
+            created_by = request.user if request else None
+            parcel = LandParcel.objects.create(created_by=created_by, **new_parcel_data)
+            validated_data['parcel'] = parcel
+        return validated_data
 
+    def create(self, validated_data):
+        proprietors_data = validated_data.pop('proprietors', [])
+        validated_data = self._handle_parcel(validated_data)
+        application = Application.objects.create(**validated_data)
+        for p in proprietors_data:
+            Proprietor.objects.create(application=application, **p)
+        return application
 
-class ApplicationStep3Serializer(serializers.ModelSerializer):
-    """Written by the Registrar."""
-    class Meta:
-        model = Application
-        fields = ['registrar_notes', 'returned_to_step', 'return_reason']
+    def update(self, instance, validated_data):
+        proprietors_data = validated_data.pop('proprietors', None)
+        validated_data = self._handle_parcel(validated_data)
+        for attr, val in validated_data.items():
+            setattr(instance, attr, val)
+        instance.save()
+        if proprietors_data is not None:
+            instance.proprietors.all().delete()
+            for p in proprietors_data:
+                Proprietor.objects.create(application=instance, **p)
+        return instance

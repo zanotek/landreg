@@ -7,13 +7,13 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { formatDate } from '@/lib/utils'
-import { Plus, Search, Eye, Loader2, CheckCircle2, RotateCcw } from 'lucide-react'
+import { Plus, Search, Eye, Loader2, CheckCircle2, RotateCcw, UserPlus, Trash2 } from 'lucide-react'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -29,6 +29,11 @@ const OWNERSHIP_TYPES = [
   ['joint', 'Joint Ownership'],
   ['company', 'Company'],
 ]
+const ID_TYPES = [
+  ['national_id', 'National ID'],
+  ['passport', 'Passport'],
+  ['company_reg', 'Company Registration'],
+]
 const INSTRUMENT_TYPES = [
   ['first_registration', 'First Registration'],
   ['transfer', 'Transfer'],
@@ -37,6 +42,18 @@ const INSTRUMENT_TYPES = [
   ['subdivision', 'Subdivision'],
   ['amalgamation', 'Amalgamation'],
   ['correction', 'Correction'],
+]
+const DISTRICTS = [
+  ['mjini', 'Mjini (Urban West)'], ['magharibi', 'Magharibi (West)'],
+  ['kaskazini_a', 'Kaskazini A'], ['kaskazini_b', 'Kaskazini B'],
+  ['kati', 'Kati (Central)'], ['kusini', 'Kusini (South)'],
+  ['chake_chake', 'Chake Chake'], ['mkoani', 'Mkoani'],
+  ['wete', 'Wete'], ['micheweni', 'Micheweni'],
+]
+const LAND_USE = [
+  ['residential', 'Residential'], ['commercial', 'Commercial'],
+  ['agricultural', 'Agricultural'], ['industrial', 'Industrial'],
+  ['institutional', 'Institutional'], ['mixed', 'Mixed Use'],
 ]
 const STATUSES = [
   ['step1', 'Step 1 – Data Entry'],
@@ -54,35 +71,30 @@ const STATUS_BADGE = {
 }
 const STATUS_LABEL = Object.fromEntries(STATUSES)
 
-const EMPTY_STEP1 = {
+const EMPTY_APP = {
   application_type: 'new_registration',
   parcel: 'none',
   parcel_number_requested: '',
-  ward: '',
-  village_or_block: '',
-  encumbrances: '',
-  description: '',
-  applicant_name: '',
-  applicant_national_id: '',
-  applicant_phone: '',
-  applicant_email: '',
-  applicant_address: '',
   ownership_type: 'sole',
-  co_proprietors: '',
   scanned_deed_url: '',
+  description: '',
 }
+const EMPTY_PARCEL = {
+  parcel_number: '', district: '', area_sqm: '',
+  land_use: '', location_description: '',
+}
+const EMPTY_PROPRIETOR = (is_primary = false) => ({
+  full_name: '', national_id: '', id_type: 'national_id',
+  phone: '', email: '', address: '', is_primary,
+})
 const EMPTY_STEP2 = {
-  registration_number: '',
-  volume_ref: '',
-  folio_ref: '',
-  registration_entry_date: '',
-  instrument_type: '',
-  reviewer_notes: '',
+  registration_number: '', volume_ref: '', folio_ref: '',
+  registration_entry_date: '', instrument_type: '', reviewer_notes: '',
 }
 const EMPTY_STEP3 = { registrar_notes: '' }
 const EMPTY_RETURN = { returned_to_step: '', return_reason: '' }
 
-// ── Small helpers ─────────────────────────────────────────────────────────────
+// ── Display helpers ───────────────────────────────────────────────────────────
 
 function Field({ label, value }) {
   return (
@@ -93,15 +105,15 @@ function Field({ label, value }) {
   )
 }
 
-function SectionHeading({ step, title, completed, name }) {
+function StepHeading({ step, title, completed, name }) {
   return (
     <div className="flex items-center gap-2 mb-3">
       <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold
         ${completed ? 'bg-green-100 text-green-700' : 'bg-primary/10 text-primary'}`}>
         {completed ? '✓' : step}
       </div>
-      <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{title}</p>
-      {name && <p className="text-xs text-muted-foreground ml-auto">by {name}</p>}
+      <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground flex-1">{title}</p>
+      {name && <p className="text-xs text-muted-foreground">by {name}</p>}
     </div>
   )
 }
@@ -112,8 +124,6 @@ export default function Applications() {
   const { user } = useAuth()
   const role = user?.profile?.role
   const isSuperuser = user?.is_superuser
-
-  const canCreate = isSuperuser || ['data_entry', 'admin'].includes(role)
   const isDataEntry = isSuperuser || ['data_entry', 'admin'].includes(role)
   const isReviewer = isSuperuser || ['reviewing_officer', 'admin'].includes(role)
   const isRegistrar = isSuperuser || ['registrar', 'admin'].includes(role)
@@ -124,15 +134,22 @@ export default function Applications() {
   const [filterStatus, setFilterStatus] = useState('all')
   const [allParcels, setAllParcels] = useState([])
 
-  // Create dialog
+  // ── Create dialog state ───────────────────────────────────────────────────
   const [newOpen, setNewOpen] = useState(false)
-  const [step1Form, setStep1Form] = useState(EMPTY_STEP1)
+  const [appForm, setAppForm] = useState(EMPTY_APP)
+  const [newParcel, setNewParcel] = useState(EMPTY_PARCEL)
+  const [showNewParcel, setShowNewParcel] = useState(false)
+  const [primaryProp, setPrimaryProp] = useState(EMPTY_PROPRIETOR(true))
+  const [coProps, setCoProps] = useState([])
   const [saving, setSaving] = useState(false)
   const [createError, setCreateError] = useState('')
 
-  // View / action dialog
+  // ── View dialog state ─────────────────────────────────────────────────────
   const [viewOpen, setViewOpen] = useState(false)
   const [selected, setSelected] = useState(null)
+  const [step1AppEdit, setStep1AppEdit] = useState(EMPTY_APP)
+  const [step1PrimaryEdit, setStep1PrimaryEdit] = useState(EMPTY_PROPRIETOR(true))
+  const [step1CoPropsEdit, setStep1CoPropsEdit] = useState([])
   const [step2Form, setStep2Form] = useState(EMPTY_STEP2)
   const [step3Form, setStep3Form] = useState(EMPTY_STEP3)
   const [returnForm, setReturnForm] = useState(EMPTY_RETURN)
@@ -142,27 +159,46 @@ export default function Applications() {
 
   const load = useCallback(() => {
     setLoading(true)
-    appsApi.list({ search: search || undefined, status: filterStatus !== 'all' ? filterStatus : undefined })
+    appsApi.list({
+      search: search || undefined,
+      status: filterStatus !== 'all' ? filterStatus : undefined,
+    })
       .then((r) => setData(r.data.results || r.data))
       .finally(() => setLoading(false))
   }, [search, filterStatus])
 
   useEffect(() => { load() }, [load])
 
+  const loadParcels = async () => {
+    if (allParcels.length > 0) return
+    const p = await parcelsApi.list({ page_size: 200 })
+    setAllParcels(p.data.results || p.data)
+  }
+
   // ── Create ──────────────────────────────────────────────────────────────────
 
   const openNew = async () => {
-    setStep1Form(EMPTY_STEP1); setCreateError('')
-    const p = await parcelsApi.list({ page_size: 200 })
-    setAllParcels(p.data.results || p.data)
+    setAppForm(EMPTY_APP)
+    setNewParcel(EMPTY_PARCEL)
+    setShowNewParcel(false)
+    setPrimaryProp(EMPTY_PROPRIETOR(true))
+    setCoProps([])
+    setCreateError('')
+    await loadParcels()
     setNewOpen(true)
   }
+
+  const buildStep1Payload = (af, np, showNP, pp, cps) => ({
+    ...af,
+    parcel: af.parcel !== 'none' ? Number(af.parcel) : null,
+    ...(showNP && af.parcel === 'none' ? { new_parcel: np } : {}),
+    proprietors: [{ ...pp, is_primary: true }, ...cps.map((c) => ({ ...c, is_primary: false }))],
+  })
 
   const handleCreate = async (e) => {
     e.preventDefault(); setSaving(true); setCreateError('')
     try {
-      const payload = { ...step1Form, parcel: step1Form.parcel && step1Form.parcel !== 'none' ? Number(step1Form.parcel) : null }
-      await appsApi.create(payload)
+      await appsApi.create(buildStep1Payload(appForm, newParcel, showNewParcel, primaryProp, coProps))
       setNewOpen(false); load()
     } catch (err) {
       const d = err.response?.data
@@ -174,33 +210,40 @@ export default function Applications() {
 
   const openView = async (app) => {
     setSelected(app)
-    setStep2Form({
-      registration_number: app.registration_number || '',
-      volume_ref: app.volume_ref || '',
-      folio_ref: app.folio_ref || '',
-      registration_entry_date: app.registration_entry_date || '',
-      instrument_type: app.instrument_type || '',
-      reviewer_notes: app.reviewer_notes || '',
+    // Prefill step1 edit state from current application data
+    const pp = app.proprietors?.find((p) => p.is_primary) ?? app.proprietors?.[0] ?? {}
+    setStep1AppEdit({
+      application_type: app.application_type || 'new_registration',
+      parcel: app.parcel ? String(app.parcel) : 'none',
+      parcel_number_requested: app.parcel_number_requested || '',
+      ownership_type: app.ownership_type || 'sole',
+      scanned_deed_url: app.scanned_deed_url || '',
+      description: app.description || '',
     })
-    setStep3Form({ registrar_notes: app.registrar_notes || '' })
+    setStep1PrimaryEdit({ ...EMPTY_PROPRIETOR(true), ...pp, is_primary: true })
+    setStep1CoPropsEdit((app.proprietors?.filter((p) => !p.is_primary) || []).map((p) => ({ ...p })))
+    setStep2Form({
+      registration_number: app.review?.registration_number || '',
+      volume_ref: app.review?.volume_ref || '',
+      folio_ref: app.review?.folio_ref || '',
+      registration_entry_date: app.review?.registration_entry_date || '',
+      instrument_type: app.review?.instrument_type || '',
+      reviewer_notes: app.review?.reviewer_notes || '',
+    })
+    setStep3Form({ registrar_notes: app.approval?.registrar_notes || '' })
     setReturnForm(EMPTY_RETURN)
     setShowReturn(false)
     setActionError('')
-    if (allParcels.length === 0) {
-      const p = await parcelsApi.list({ page_size: 200 })
-      setAllParcels(p.data.results || p.data)
-    }
+    await loadParcels()
     setViewOpen(true)
   }
 
-  // Determine what action the current officer can take
   const getActiveStep = (app) => {
     if (!app) return null
-    const { status, returned_to_step } = app
-    if (status === 'step1') return 1
-    if (status === 'returned') return returned_to_step
-    if (status === 'step2') return 2
-    if (status === 'step3') return 3
+    if (app.status === 'step1') return 1
+    if (app.status === 'returned') return app.returned_to_step
+    if (app.status === 'step2') return 2
+    if (app.status === 'step3') return 3
     return null
   }
 
@@ -215,56 +258,168 @@ export default function Applications() {
   const handleStep1Submit = async () => {
     setActing(true); setActionError('')
     try {
-      await appsApi.submitStep1(selected.id, {
-        ...step1Form,
-        parcel: step1Form.parcel && step1Form.parcel !== 'none' ? Number(step1Form.parcel) : null,
-      })
+      await appsApi.submitStep1(
+        selected.id,
+        buildStep1Payload(step1AppEdit, null, false, step1PrimaryEdit, step1CoPropsEdit),
+      )
       setViewOpen(false); load()
     } catch (err) {
       const d = err.response?.data
-      setActionError(typeof d === 'object' ? Object.values(d).flat().join(' ') : 'Failed to submit.')
+      setActionError(typeof d === 'object' ? Object.values(d).flat().join(' ') : 'Failed.')
     } finally { setActing(false) }
   }
 
   const handleStep2Submit = async (returning = false) => {
     setActing(true); setActionError('')
     try {
-      const payload = returning
-        ? { ...returnForm }
-        : { ...step2Form }
-      await appsApi.submitStep2(selected.id, payload)
+      await appsApi.submitStep2(selected.id, returning ? returnForm : step2Form)
       setViewOpen(false); load()
     } catch (err) {
       const d = err.response?.data
-      setActionError(typeof d === 'object' ? Object.values(d).flat().join(' ') : 'Failed to submit.')
+      setActionError(typeof d === 'object' ? Object.values(d).flat().join(' ') : 'Failed.')
     } finally { setActing(false) }
   }
 
   const handleStep3Submit = async (returning = false) => {
     setActing(true); setActionError('')
     try {
-      const payload = returning
-        ? { ...step3Form, ...returnForm }
-        : { ...step3Form }
-      await appsApi.submitStep3(selected.id, payload)
+      await appsApi.submitStep3(selected.id, returning ? { ...step3Form, ...returnForm } : step3Form)
       setViewOpen(false); load()
     } catch (err) {
       const d = err.response?.data
-      setActionError(typeof d === 'object' ? Object.values(d).flat().join(' ') : 'Failed to submit.')
+      setActionError(typeof d === 'object' ? Object.values(d).flat().join(' ') : 'Failed.')
     } finally { setActing(false) }
   }
 
-  // ── Setters ─────────────────────────────────────────────────────────────────
-
-  const s1 = (k) => (e) => setStep1Form({ ...step1Form, [k]: e.target.value })
-  const s1v = (k) => (v) => setStep1Form({ ...step1Form, [k]: v })
-  const s2 = (k) => (e) => setStep2Form({ ...step2Form, [k]: e.target.value })
-  const s2v = (k) => (v) => setStep2Form({ ...step2Form, [k]: v })
-  const s3 = (k) => (e) => setStep3Form({ ...step3Form, [k]: e.target.value })
-  const sr = (k) => (e) => setReturnForm({ ...returnForm, [k]: e.target.value })
-  const srv = (k) => (v) => setReturnForm({ ...returnForm, [k]: v })
-
   const actingStep = selected ? canActOnStep(selected) : null
+  const primaryPropDisplay = selected?.proprietors?.find((p) => p.is_primary) ?? selected?.proprietors?.[0]
+
+  // ── Proprietor helpers ────────────────────────────────────────────────────
+
+  const ProprietorFields = ({ value, onChange, label }) => (
+    <div className="space-y-2 rounded-md border p-3">
+      {label && <p className="text-xs font-semibold text-muted-foreground uppercase">{label}</p>}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1"><Label className="text-xs">Full Name *</Label>
+          <Input required value={value.full_name} onChange={(e) => onChange({ ...value, full_name: e.target.value })} /></div>
+        <div className="space-y-1"><Label className="text-xs">ID Type</Label>
+          <Select value={value.id_type} onValueChange={(v) => onChange({ ...value, id_type: v })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>{ID_TYPES.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
+          </Select></div>
+        <div className="space-y-1"><Label className="text-xs">ID Number *</Label>
+          <Input required value={value.national_id} onChange={(e) => onChange({ ...value, national_id: e.target.value })} /></div>
+        <div className="space-y-1"><Label className="text-xs">Phone</Label>
+          <Input value={value.phone} onChange={(e) => onChange({ ...value, phone: e.target.value })} /></div>
+        <div className="space-y-1"><Label className="text-xs">Email</Label>
+          <Input type="email" value={value.email} onChange={(e) => onChange({ ...value, email: e.target.value })} /></div>
+        <div className="space-y-1 col-span-2"><Label className="text-xs">Address</Label>
+          <Input value={value.address} onChange={(e) => onChange({ ...value, address: e.target.value })} /></div>
+      </div>
+    </div>
+  )
+
+  const Step1Fields = ({ af, setAf, pp, setPp, cps, setCps }) => (
+    <div className="space-y-4">
+      {/* Application type & parcel */}
+      <div className="space-y-1.5">
+        <Label>Application Type *</Label>
+        <Select value={af.application_type} onValueChange={(v) => setAf({ ...af, application_type: v })}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>{APP_TYPES.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1.5">
+        <Label>Existing Parcel</Label>
+        <Select value={af.parcel} onValueChange={(v) => { setAf({ ...af, parcel: v }); setShowNewParcel(false) }}>
+          <SelectTrigger><SelectValue placeholder="Select parcel" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">None / New Parcel</SelectItem>
+            {allParcels.map((p) => (
+              <SelectItem key={p.id} value={String(p.id)}>{p.parcel_number} — {p.district_display}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      {af.parcel === 'none' && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <input type="checkbox" id="showNP" checked={showNewParcel}
+              onChange={(e) => setShowNewParcel(e.target.checked)} className="h-4 w-4" />
+            <label htmlFor="showNP" className="text-sm">Register new parcel inline</label>
+          </div>
+          {showNewParcel ? (
+            <div className="rounded-md border p-3 space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase">New Parcel Details</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1"><Label className="text-xs">Parcel Number *</Label>
+                  <Input required value={newParcel.parcel_number} onChange={(e) => setNewParcel({ ...newParcel, parcel_number: e.target.value })} /></div>
+                <div className="space-y-1"><Label className="text-xs">Area (m²) *</Label>
+                  <Input required type="number" value={newParcel.area_sqm} onChange={(e) => setNewParcel({ ...newParcel, area_sqm: e.target.value })} /></div>
+                <div className="space-y-1"><Label className="text-xs">District *</Label>
+                  <Select value={newParcel.district} onValueChange={(v) => setNewParcel({ ...newParcel, district: v })}>
+                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectContent>{DISTRICTS.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
+                  </Select></div>
+                <div className="space-y-1"><Label className="text-xs">Land Use *</Label>
+                  <Select value={newParcel.land_use} onValueChange={(v) => setNewParcel({ ...newParcel, land_use: v })}>
+                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectContent>{LAND_USE.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
+                  </Select></div>
+                <div className="space-y-1 col-span-2"><Label className="text-xs">Location Description *</Label>
+                  <Textarea rows={2} required value={newParcel.location_description} onChange={(e) => setNewParcel({ ...newParcel, location_description: e.target.value })} /></div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <Label>Requested Parcel Number</Label>
+              <Input value={af.parcel_number_requested} onChange={(e) => setAf({ ...af, parcel_number_requested: e.target.value })} placeholder="e.g. ZNZ-MJN-001" />
+            </div>
+          )}
+        </div>
+      )}
+      <div className="space-y-1.5">
+        <Label>Description</Label>
+        <Textarea rows={2} value={af.description} onChange={(e) => setAf({ ...af, description: e.target.value })} placeholder="Supporting details" />
+      </div>
+      <div className="space-y-1.5">
+        <Label>Scanned Deed URL</Label>
+        <Input type="url" value={af.scanned_deed_url} onChange={(e) => setAf({ ...af, scanned_deed_url: e.target.value })} placeholder="https://…" />
+      </div>
+      <Separator />
+      {/* Proprietors */}
+      <div>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Proprietors</p>
+        <div className="space-y-1.5 mb-3">
+          <Label>Nature of Ownership</Label>
+          <Select value={af.ownership_type} onValueChange={(v) => setAf({ ...af, ownership_type: v })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>{OWNERSHIP_TYPES.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        <ProprietorFields value={pp} onChange={setPp} label="Primary Proprietor" />
+        {cps.map((cp, i) => (
+          <div key={i} className="relative mt-2">
+            <ProprietorFields
+              value={cp}
+              onChange={(v) => { const n = [...cps]; n[i] = v; setCps(n) }}
+              label={`Co-Proprietor ${i + 1}`}
+            />
+            <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6 text-destructive"
+              type="button" onClick={() => setCps(cps.filter((_, j) => j !== i))}>
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        ))}
+        {af.ownership_type !== 'sole' && (
+          <Button type="button" variant="outline" size="sm" className="mt-2 gap-1.5"
+            onClick={() => setCps([...cps, EMPTY_PROPRIETOR(false)])}>
+            <UserPlus className="h-3.5 w-3.5" /> Add Co-Proprietor
+          </Button>
+        )}
+      </div>
+    </div>
+  )
 
   return (
     <div className="space-y-6">
@@ -273,7 +428,7 @@ export default function Applications() {
           <h1 className="text-2xl font-bold">Applications</h1>
           <p className="text-muted-foreground mt-1">Submit and manage registration applications</p>
         </div>
-        {canCreate && (
+        {isDataEntry && (
           <Button onClick={openNew}><Plus className="mr-2 h-4 w-4" /> New Application</Button>
         )}
       </div>
@@ -283,7 +438,7 @@ export default function Applications() {
         <CardContent className="p-4 flex flex-wrap gap-3">
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search application #, applicant…" className="pl-9" value={search}
+            <Input placeholder="Search application #, name, ID…" className="pl-9" value={search}
               onChange={(e) => setSearch(e.target.value)} />
           </div>
           <Select value={filterStatus} onValueChange={setFilterStatus}>
@@ -302,7 +457,7 @@ export default function Applications() {
           <TableHeader>
             <TableRow>
               <TableHead>App #</TableHead>
-              <TableHead>Applicant</TableHead>
+              <TableHead>Proprietor</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Parcel</TableHead>
               <TableHead>Status</TableHead>
@@ -321,142 +476,52 @@ export default function Applications() {
                   No applications found
                 </TableCell>
               </TableRow>
-            ) : data.map((app) => (
-              <TableRow key={app.id}>
-                <TableCell className="font-mono text-xs">{app.application_number}</TableCell>
-                <TableCell className="font-medium">{app.applicant_name}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{app.application_type_display}</TableCell>
-                <TableCell className="font-mono text-sm">
-                  {app.parcel_number || app.parcel_number_requested || '—'}
-                </TableCell>
-                <TableCell>
-                  <Badge variant={STATUS_BADGE[app.status] || 'outline'}>
-                    {STATUS_LABEL[app.status] || app.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">{formatDate(app.submitted_at)}</TableCell>
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="icon" onClick={() => openView(app)}>
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+            ) : data.map((app) => {
+              const pp = app.proprietors?.find((p) => p.is_primary) ?? app.proprietors?.[0]
+              return (
+                <TableRow key={app.id}>
+                  <TableCell className="font-mono text-xs">{app.application_number}</TableCell>
+                  <TableCell className="font-medium">{pp?.full_name || '—'}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{app.application_type_display}</TableCell>
+                  <TableCell className="font-mono text-sm">
+                    {app.parcel_number || app.parcel_number_requested || '—'}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={STATUS_BADGE[app.status] || 'outline'}>
+                      {STATUS_LABEL[app.status] || app.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{formatDate(app.submitted_at)}</TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" onClick={() => openView(app)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              )
+            })}
           </TableBody>
         </Table>
       </Card>
 
-      {/* ── Create Dialog (Step 1) ─────────────────────────────────────────── */}
+      {/* ── Create Dialog ─────────────────────────────────────────────────────── */}
       <Dialog open={newOpen} onOpenChange={setNewOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Submit New Application</DialogTitle></DialogHeader>
-          <form onSubmit={handleCreate} className="space-y-5 mt-2">
+          <DialogHeader><DialogTitle>New Application</DialogTitle></DialogHeader>
+          <form onSubmit={handleCreate} className="space-y-4 mt-2">
             {createError && <p className="text-sm text-destructive">{createError}</p>}
-
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Property Information</p>
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label>Application Type *</Label>
-                  <Select value={step1Form.application_type} onValueChange={s1v('application_type')}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{APP_TYPES.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Existing Parcel (if applicable)</Label>
-                  <Select value={step1Form.parcel} onValueChange={s1v('parcel')}>
-                    <SelectTrigger><SelectValue placeholder="Select parcel (optional)" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {allParcels.map((p) => (
-                        <SelectItem key={p.id} value={String(p.id)}>{p.parcel_number} — {p.district_display}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {(!step1Form.parcel || step1Form.parcel === 'none') && (
-                  <div className="space-y-1.5">
-                    <Label>Requested Parcel Number</Label>
-                    <Input value={step1Form.parcel_number_requested} onChange={s1('parcel_number_requested')} placeholder="e.g. ZNZ-MJN-001" />
-                  </div>
-                )}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label>Ward</Label>
-                    <Input value={step1Form.ward} onChange={s1('ward')} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Village / Block</Label>
-                    <Input value={step1Form.village_or_block} onChange={s1('village_or_block')} />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Encumbrances / Restrictions</Label>
-                  <Textarea rows={2} value={step1Form.encumbrances} onChange={s1('encumbrances')} placeholder="Any encumbrances or restrictions noted on the deed" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Description *</Label>
-                  <Textarea required rows={3} value={step1Form.description} onChange={s1('description')} placeholder="Supporting details" />
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Proprietorship Information</p>
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label>Full Name *</Label>
-                    <Input required value={step1Form.applicant_name} onChange={s1('applicant_name')} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>National ID *</Label>
-                    <Input required value={step1Form.applicant_national_id} onChange={s1('applicant_national_id')} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Phone *</Label>
-                    <Input required value={step1Form.applicant_phone} onChange={s1('applicant_phone')} placeholder="+255 7xx xxx xxx" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Email</Label>
-                    <Input type="email" value={step1Form.applicant_email} onChange={s1('applicant_email')} />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Address</Label>
-                  <Textarea rows={2} value={step1Form.applicant_address} onChange={s1('applicant_address')} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Nature of Ownership</Label>
-                  <Select value={step1Form.ownership_type} onValueChange={s1v('ownership_type')}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{OWNERSHIP_TYPES.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                {step1Form.ownership_type === 'joint' && (
-                  <div className="space-y-1.5">
-                    <Label>Co-Proprietors *</Label>
-                    <Textarea required rows={3} value={step1Form.co_proprietors} onChange={s1('co_proprietors')}
-                      placeholder="Names and ID details of all co-proprietors" />
-                  </div>
-                )}
-                <div className="space-y-1.5">
-                  <Label>Scanned Deed URL</Label>
-                  <Input type="url" value={step1Form.scanned_deed_url} onChange={s1('scanned_deed_url')} placeholder="https://…" />
-                </div>
-              </div>
-            </div>
-
-            <DialogFooter>
+            <Step1Fields
+              af={appForm} setAf={setAppForm}
+              pp={primaryProp} setPp={setPrimaryProp}
+              cps={coProps} setCps={setCoProps}
+            />
+            <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setNewOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={saving}>
                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Save Application
               </Button>
-            </DialogFooter>
+            </div>
           </form>
         </DialogContent>
       </Dialog>
@@ -466,7 +531,7 @@ export default function Applications() {
         <Dialog open={viewOpen} onOpenChange={setViewOpen}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
+              <DialogTitle className="flex items-center gap-2 flex-wrap">
                 {selected.application_number}
                 <Badge variant={STATUS_BADGE[selected.status] || 'outline'} className="ml-1">
                   {STATUS_LABEL[selected.status] || selected.status}
@@ -474,184 +539,153 @@ export default function Applications() {
               </DialogTitle>
             </DialogHeader>
 
-            <div className="space-y-5 mt-1">
+            <div className="space-y-4 mt-1">
 
-              {/* Step 1 — Data Entry */}
+              {/* ── Step 1 ─────────────────────────────────────────────────── */}
               <div className="rounded-lg border p-4">
-                <SectionHeading step={1} title="Data Entry" completed={selected.step1_at}
-                  name={selected.step1_by_name} />
+                <StepHeading step={1} title="Data Entry"
+                  completed={selected.step1_at} name={selected.step1_by_name} />
 
                 {actingStep === 1 ? (
-                  /* Editable step 1 */
-                  <div className="space-y-3">
-                    <div className="space-y-1.5">
-                      <Label>Application Type *</Label>
-                      <Select value={step1Form.application_type} onValueChange={s1v('application_type')}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>{APP_TYPES.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Existing Parcel</Label>
-                      <Select value={step1Form.parcel} onValueChange={s1v('parcel')}>
-                        <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
-                          {allParcels.map((p) => (
-                            <SelectItem key={p.id} value={String(p.id)}>{p.parcel_number} — {p.district_display}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {(!step1Form.parcel || step1Form.parcel === 'none') && (
-                      <div className="space-y-1.5">
-                        <Label>Requested Parcel Number</Label>
-                        <Input value={step1Form.parcel_number_requested} onChange={s1('parcel_number_requested')} />
-                      </div>
-                    )}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5"><Label>Ward</Label><Input value={step1Form.ward} onChange={s1('ward')} /></div>
-                      <div className="space-y-1.5"><Label>Village / Block</Label><Input value={step1Form.village_or_block} onChange={s1('village_or_block')} /></div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Encumbrances</Label>
-                      <Textarea rows={2} value={step1Form.encumbrances} onChange={s1('encumbrances')} />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Description *</Label>
-                      <Textarea required rows={2} value={step1Form.description} onChange={s1('description')} />
-                    </div>
-                    <Separator />
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5"><Label>Full Name *</Label><Input required value={step1Form.applicant_name} onChange={s1('applicant_name')} /></div>
-                      <div className="space-y-1.5"><Label>National ID *</Label><Input required value={step1Form.applicant_national_id} onChange={s1('applicant_national_id')} /></div>
-                      <div className="space-y-1.5"><Label>Phone *</Label><Input required value={step1Form.applicant_phone} onChange={s1('applicant_phone')} /></div>
-                      <div className="space-y-1.5"><Label>Email</Label><Input type="email" value={step1Form.applicant_email} onChange={s1('applicant_email')} /></div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Address</Label>
-                      <Textarea rows={2} value={step1Form.applicant_address} onChange={s1('applicant_address')} />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Ownership Type</Label>
-                      <Select value={step1Form.ownership_type} onValueChange={s1v('ownership_type')}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>{OWNERSHIP_TYPES.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
-                      </Select>
-                    </div>
-                    {step1Form.ownership_type === 'joint' && (
-                      <div className="space-y-1.5">
-                        <Label>Co-Proprietors</Label>
-                        <Textarea rows={2} value={step1Form.co_proprietors} onChange={s1('co_proprietors')} />
-                      </div>
-                    )}
-                    <div className="space-y-1.5">
-                      <Label>Scanned Deed URL</Label>
-                      <Input type="url" value={step1Form.scanned_deed_url} onChange={s1('scanned_deed_url')} placeholder="https://…" />
-                    </div>
-                  </div>
+                  <Step1Fields
+                    af={step1AppEdit} setAf={setStep1AppEdit}
+                    pp={step1PrimaryEdit} setPp={setStep1PrimaryEdit}
+                    cps={step1CoPropsEdit} setCps={setStep1CoPropsEdit}
+                  />
                 ) : (
-                  /* Read-only step 1 */
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                       <Field label="Type" value={selected.application_type_display} />
+                      <Field label="Ownership" value={selected.ownership_type_display} />
                       <Field label="Parcel" value={selected.parcel_number || selected.parcel_number_requested} />
-                      <Field label="Ward" value={selected.ward} />
-                      <Field label="Village / Block" value={selected.village_or_block} />
-                    </div>
-                    {selected.encumbrances && <Field label="Encumbrances" value={selected.encumbrances} />}
-                    {selected.description && <Field label="Description" value={selected.description} />}
-                    <Separator />
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                      <Field label="Applicant" value={selected.applicant_name} />
-                      <Field label="National ID" value={selected.applicant_national_id} />
-                      <Field label="Phone" value={selected.applicant_phone} />
-                      <Field label="Email" value={selected.applicant_email} />
-                      <Field label="Ownership" value={OWNERSHIP_TYPES.find(([v]) => v === selected.ownership_type)?.[1]} />
+                      {selected.description && <Field label="Description" value={selected.description} />}
                       {selected.scanned_deed_url && (
                         <div>
                           <p className="text-xs text-muted-foreground">Scanned Deed</p>
                           <a href={selected.scanned_deed_url} target="_blank" rel="noreferrer"
-                            className="text-sm text-primary underline truncate block">View</a>
+                            className="text-sm text-primary underline">View</a>
                         </div>
                       )}
                     </div>
-                    {selected.co_proprietors && <Field label="Co-Proprietors" value={selected.co_proprietors} />}
-                    {selected.applicant_address && <Field label="Address" value={selected.applicant_address} />}
+                    {/* Parcel detail */}
+                    {selected.parcel_detail && (
+                      <>
+                        <Separator />
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                          <Field label="District" value={selected.parcel_detail.district_display} />
+                          <Field label="Area" value={selected.parcel_detail.area_sqm ? `${selected.parcel_detail.area_sqm} m²` : null} />
+                          <Field label="Land Use" value={selected.parcel_detail.land_use_display} />
+                          {selected.parcel_detail.ward && <Field label="Ward" value={selected.parcel_detail.ward} />}
+                          {selected.parcel_detail.village_or_block && <Field label="Village / Block" value={selected.parcel_detail.village_or_block} />}
+                          {selected.parcel_detail.encumbrances && <Field label="Encumbrances" value={selected.parcel_detail.encumbrances} />}
+                        </div>
+                      </>
+                    )}
+                    <Separator />
+                    {/* Proprietors */}
+                    {selected.proprietors?.map((p, i) => (
+                      <div key={p.id} className="grid grid-cols-2 gap-x-4 gap-y-2">
+                        <div className="col-span-2">
+                          <p className="text-xs font-semibold text-muted-foreground uppercase">
+                            {p.is_primary ? 'Primary Proprietor' : `Co-Proprietor ${i}`}
+                          </p>
+                        </div>
+                        <Field label="Name" value={p.full_name} />
+                        <Field label={p.id_type_display || 'ID'} value={p.national_id} />
+                        {p.phone && <Field label="Phone" value={p.phone} />}
+                        {p.email && <Field label="Email" value={p.email} />}
+                        {p.address && <Field label="Address" value={p.address} />}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
 
-              {/* Step 2 — Reviewing Officer */}
+              {/* ── Step 2 ─────────────────────────────────────────────────── */}
               {(['step2', 'step3', 'returned', 'approved', 'rejected'].includes(selected.status) || actingStep === 2) && (
                 <div className="rounded-lg border p-4">
-                  <SectionHeading step={2} title="Review" completed={selected.step2_at}
-                    name={selected.step2_by_name} />
+                  <StepHeading step={2} title="Review"
+                    completed={selected.review?.reviewed_at}
+                    name={selected.review?.reviewed_by_name} />
 
                   {actingStep === 2 ? (
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1.5">
                           <Label>Registration Number *</Label>
-                          <Input required value={step2Form.registration_number} onChange={s2('registration_number')} />
+                          <Input value={step2Form.registration_number}
+                            onChange={(e) => setStep2Form({ ...step2Form, registration_number: e.target.value })} />
                         </div>
                         <div className="space-y-1.5">
                           <Label>Instrument Type</Label>
-                          <Select value={step2Form.instrument_type} onValueChange={s2v('instrument_type')}>
+                          <Select value={step2Form.instrument_type}
+                            onValueChange={(v) => setStep2Form({ ...step2Form, instrument_type: v })}>
                             <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
-                            <SelectContent>{INSTRUMENT_TYPES.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
+                            <SelectContent>
+                              {INSTRUMENT_TYPES.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
+                            </SelectContent>
                           </Select>
                         </div>
                         <div className="space-y-1.5">
                           <Label>Volume Ref</Label>
-                          <Input value={step2Form.volume_ref} onChange={s2('volume_ref')} />
+                          <Input value={step2Form.volume_ref}
+                            onChange={(e) => setStep2Form({ ...step2Form, volume_ref: e.target.value })} />
                         </div>
                         <div className="space-y-1.5">
                           <Label>Folio Ref</Label>
-                          <Input value={step2Form.folio_ref} onChange={s2('folio_ref')} />
+                          <Input value={step2Form.folio_ref}
+                            onChange={(e) => setStep2Form({ ...step2Form, folio_ref: e.target.value })} />
                         </div>
                         <div className="space-y-1.5 col-span-2">
                           <Label>Registration Entry Date</Label>
-                          <Input type="date" value={step2Form.registration_entry_date} onChange={s2('registration_entry_date')} />
+                          <Input type="date" value={step2Form.registration_entry_date}
+                            onChange={(e) => setStep2Form({ ...step2Form, registration_entry_date: e.target.value })} />
                         </div>
                       </div>
                       <div className="space-y-1.5">
                         <Label>Notes for Registrar</Label>
-                        <Textarea rows={2} value={step2Form.reviewer_notes} onChange={s2('reviewer_notes')} />
+                        <Textarea rows={2} value={step2Form.reviewer_notes}
+                          onChange={(e) => setStep2Form({ ...step2Form, reviewer_notes: e.target.value })} />
                       </div>
                     </div>
-                  ) : (
+                  ) : selected.review && (
                     <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                      <Field label="Registration Number" value={selected.registration_number} />
-                      <Field label="Instrument Type" value={INSTRUMENT_TYPES.find(([v]) => v === selected.instrument_type)?.[1]} />
-                      <Field label="Volume Ref" value={selected.volume_ref} />
-                      <Field label="Folio Ref" value={selected.folio_ref} />
-                      <Field label="Entry Date" value={selected.registration_entry_date} />
-                      {selected.reviewer_notes && <Field label="Notes" value={selected.reviewer_notes} />}
+                      <Field label="Registration Number" value={selected.review.registration_number} />
+                      <Field label="Instrument" value={selected.review.instrument_type_display} />
+                      <Field label="Volume" value={selected.review.volume_ref} />
+                      <Field label="Folio" value={selected.review.folio_ref} />
+                      <Field label="Entry Date" value={selected.review.registration_entry_date} />
+                      {selected.review.reviewer_notes && (
+                        <div className="col-span-2">
+                          <Field label="Reviewer Notes" value={selected.review.reviewer_notes} />
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
               )}
 
-              {/* Step 3 — Registrar */}
+              {/* ── Step 3 ─────────────────────────────────────────────────── */}
               {(['step3', 'approved', 'rejected'].includes(selected.status) || actingStep === 3) && (
                 <div className="rounded-lg border p-4">
-                  <SectionHeading step={3} title="Registrar Approval" completed={selected.step3_at}
-                    name={selected.step3_by_name} />
+                  <StepHeading step={3} title="Registrar Approval"
+                    completed={selected.approval?.approved_at}
+                    name={selected.approval?.approved_by_name} />
 
                   {actingStep === 3 ? (
                     <div className="space-y-1.5">
                       <Label>Registrar Notes</Label>
-                      <Textarea rows={3} value={step3Form.registrar_notes} onChange={s3('registrar_notes')}
+                      <Textarea rows={3} value={step3Form.registrar_notes}
+                        onChange={(e) => setStep3Form({ registrar_notes: e.target.value })}
                         placeholder="Optional remarks for the record" />
                     </div>
-                  ) : (
-                    selected.registrar_notes && <Field label="Registrar Notes" value={selected.registrar_notes} />
+                  ) : selected.approval?.registrar_notes && (
+                    <Field label="Registrar Notes" value={selected.approval.registrar_notes} />
                   )}
                 </div>
               )}
 
-              {/* Return info */}
+              {/* ── Return info ─────────────────────────────────────────────── */}
               {selected.status === 'returned' && selected.return_reason && (
                 <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
                   <p className="text-sm font-semibold text-destructive mb-1">
@@ -661,10 +695,9 @@ export default function Applications() {
                 </div>
               )}
 
-              {/* Action errors */}
               {actionError && <p className="text-sm text-destructive">{actionError}</p>}
 
-              {/* Action buttons */}
+              {/* ── Action buttons ──────────────────────────────────────────── */}
               {actingStep === 1 && (
                 <div className="flex justify-end gap-2 pt-1">
                   <Button variant="outline" onClick={() => setViewOpen(false)}>Close</Button>
@@ -678,80 +711,53 @@ export default function Applications() {
 
               {actingStep === 2 && !showReturn && (
                 <div className="flex justify-end gap-2 pt-1">
-                  <Button variant="outline" onClick={() => { setShowReturn(true) }}>
-                    <RotateCcw className="mr-2 h-4 w-4" />
-                    Return for Correction
+                  <Button variant="outline" onClick={() => setShowReturn(true)}>
+                    <RotateCcw className="mr-2 h-4 w-4" /> Return for Correction
                   </Button>
                   <Button onClick={() => handleStep2Submit(false)} disabled={acting}>
                     {acting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    <CheckCircle2 className="mr-2 h-4 w-4" />
-                    Submit to Registrar
+                    <CheckCircle2 className="mr-2 h-4 w-4" /> Submit to Registrar
                   </Button>
-                </div>
-              )}
-
-              {actingStep === 2 && showReturn && (
-                <div className="rounded-lg border p-4 space-y-3">
-                  <p className="text-sm font-semibold">Return for Correction</p>
-                  <div className="space-y-1.5">
-                    <Label>Return to Step</Label>
-                    <Select value={String(returnForm.returned_to_step)} onValueChange={srv('returned_to_step')}>
-                      <SelectTrigger><SelectValue placeholder="Select step" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">Step 1 — Data Entry</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Reason *</Label>
-                    <Textarea required rows={3} value={returnForm.return_reason} onChange={sr('return_reason')}
-                      placeholder="Describe the discrepancy or required correction" />
-                  </div>
-                  <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={() => setShowReturn(false)}>Cancel</Button>
-                    <Button variant="destructive" onClick={() => handleStep2Submit(true)} disabled={acting || !returnForm.return_reason}>
-                      {acting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Return Application
-                    </Button>
-                  </div>
                 </div>
               )}
 
               {actingStep === 3 && !showReturn && (
                 <div className="flex justify-end gap-2 pt-1">
                   <Button variant="outline" onClick={() => setShowReturn(true)}>
-                    <RotateCcw className="mr-2 h-4 w-4" />
-                    Return for Correction
+                    <RotateCcw className="mr-2 h-4 w-4" /> Return for Correction
                   </Button>
                   <Button onClick={() => handleStep3Submit(false)} disabled={acting}>
                     {acting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    <CheckCircle2 className="mr-2 h-4 w-4" />
-                    Approve &amp; Register
+                    <CheckCircle2 className="mr-2 h-4 w-4" /> Approve &amp; Register
                   </Button>
                 </div>
               )}
 
-              {actingStep === 3 && showReturn && (
+              {(actingStep === 2 || actingStep === 3) && showReturn && (
                 <div className="rounded-lg border p-4 space-y-3">
                   <p className="text-sm font-semibold">Return for Correction</p>
                   <div className="space-y-1.5">
                     <Label>Return to Step</Label>
-                    <Select value={String(returnForm.returned_to_step)} onValueChange={srv('returned_to_step')}>
+                    <Select value={String(returnForm.returned_to_step)}
+                      onValueChange={(v) => setReturnForm({ ...returnForm, returned_to_step: v })}>
                       <SelectTrigger><SelectValue placeholder="Select step" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="1">Step 1 — Data Entry</SelectItem>
-                        <SelectItem value="2">Step 2 — Reviewing Officer</SelectItem>
+                        {actingStep === 3 && <SelectItem value="2">Step 2 — Reviewing Officer</SelectItem>}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-1.5">
                     <Label>Reason *</Label>
-                    <Textarea required rows={3} value={returnForm.return_reason} onChange={sr('return_reason')}
+                    <Textarea rows={3} value={returnForm.return_reason}
+                      onChange={(e) => setReturnForm({ ...returnForm, return_reason: e.target.value })}
                       placeholder="Describe what needs to be corrected" />
                   </div>
                   <div className="flex justify-end gap-2">
                     <Button variant="outline" onClick={() => setShowReturn(false)}>Cancel</Button>
-                    <Button variant="destructive" onClick={() => handleStep3Submit(true)} disabled={acting || !returnForm.return_reason}>
+                    <Button variant="destructive"
+                      onClick={() => actingStep === 2 ? handleStep2Submit(true) : handleStep3Submit(true)}
+                      disabled={acting || !returnForm.return_reason || !returnForm.returned_to_step}>
                       {acting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Return Application
                     </Button>

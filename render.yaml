@@ -33,7 +33,7 @@ services:
       - key: ADMIN_USERNAME
         value: admin
       - key: ADMIN_PASSWORD
-        generateValue: true
+        sync: false  # Set this manually in the Render dashboard
       - key: ADMIN_EMAIL
         value: admin@landreg.go.tz
       - key: PYTHON_VERSION

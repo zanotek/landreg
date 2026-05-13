@@ -12,13 +12,14 @@ class Command(BaseCommand):
         password = os.environ.get('ADMIN_PASSWORD', 'Admin@Zanzibar2024!')
         email = os.environ.get('ADMIN_EMAIL', 'admin@landreg.go.tz')
 
-        if User.objects.filter(username=username).exists():
-            self.stdout.write(f'Admin user "{username}" already exists.')
-            return
-
-        user = User.objects.create_superuser(
-            username=username, password=password, email=email,
-            first_name='System', last_name='Administrator'
+        user, created = User.objects.get_or_create(
+            username=username,
+            defaults={'email': email, 'first_name': 'System', 'last_name': 'Administrator', 'is_staff': True, 'is_superuser': True},
         )
+        user.set_password(password)
+        user.is_staff = True
+        user.is_superuser = True
+        user.save()
         UserProfile.objects.get_or_create(user=user, defaults={'role': 'admin'})
-        self.stdout.write(self.style.SUCCESS(f'Created admin user: {username}'))
+        action = 'Created' if created else 'Updated password for'
+        self.stdout.write(self.style.SUCCESS(f'{action} admin user: {username}'))

@@ -156,6 +156,7 @@ export default function Applications() {
   const [showReturn, setShowReturn] = useState(false)
   const [acting, setActing] = useState(false)
   const [actionError, setActionError] = useState('')
+  const [detailLoading, setDetailLoading] = useState(false)
 
   const load = useCallback(() => {
     setLoading(true)
@@ -208,9 +209,7 @@ export default function Applications() {
 
   // ── View / action ───────────────────────────────────────────────────────────
 
-  const openView = async (app) => {
-    setSelected(app)
-    // Prefill step1 edit state from current application data
+  const populateViewState = (app) => {
     const pp = app.proprietors?.find((p) => p.is_primary) ?? app.proprietors?.[0] ?? {}
     setStep1AppEdit({
       application_type: app.application_type || 'new_registration',
@@ -231,11 +230,26 @@ export default function Applications() {
       reviewer_notes: app.review?.reviewer_notes || '',
     })
     setStep3Form({ registrar_notes: app.approval?.registrar_notes || '' })
+  }
+
+  const openView = async (app) => {
+    // Show dialog immediately with list-row data, then replace with fresh detail fetch
+    setSelected(app)
+    populateViewState(app)
     setReturnForm(EMPTY_RETURN)
     setShowReturn(false)
     setActionError('')
-    await loadParcels()
     setViewOpen(true)
+    await loadParcels()
+    // Fetch full detail (includes nested proprietors, review, approval)
+    setDetailLoading(true)
+    try {
+      const res = await appsApi.get(app.id)
+      setSelected(res.data)
+      populateViewState(res.data)
+    } finally {
+      setDetailLoading(false)
+    }
   }
 
   const getActiveStep = (app) => {
@@ -538,6 +552,12 @@ export default function Applications() {
                 </Badge>
               </DialogTitle>
             </DialogHeader>
+
+            {detailLoading && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5 mb-1">
+                <Loader2 className="h-3 w-3 animate-spin" /> Loading full record…
+              </p>
+            )}
 
             <div className="space-y-4 mt-1">
 

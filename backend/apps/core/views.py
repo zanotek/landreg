@@ -204,6 +204,8 @@ class ApplicationViewSet(viewsets.ModelViewSet):
             serializer.save(approved_by=request.user, approved_at=timezone.now())
             app.status = 'approved'
             app.save(update_fields=['status', 'updated_at'])
+            if app.application_type == 'new_registration' and app.parcel_id:
+                LandParcel.objects.filter(pk=app.parcel_id).update(status='registered')
 
         app.refresh_from_db()
         return Response(ApplicationListSerializer(app, context={'request': request}).data)

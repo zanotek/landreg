@@ -70,6 +70,8 @@ const STATUS_BADGE = {
   rejected: 'destructive', cancelled: 'secondary',
 }
 const STATUS_LABEL = Object.fromEntries(STATUSES)
+const APP_TYPE_MAP = Object.fromEntries(APP_TYPES)
+const OWNERSHIP_MAP = Object.fromEntries(OWNERSHIP_TYPES)
 
 const EMPTY_APP = {
   application_type: 'new_registration',
@@ -157,6 +159,8 @@ export default function Applications() {
   const [acting, setActing] = useState(false)
   const [actionError, setActionError] = useState('')
   const [detailLoading, setDetailLoading] = useState(false)
+  const [confirmCreateOpen, setConfirmCreateOpen] = useState(false)
+  const [confirmStep1Open, setConfirmStep1Open] = useState(false)
 
   const load = useCallback(() => {
     setLoading(true)
@@ -196,14 +200,22 @@ export default function Applications() {
     proprietors: [{ ...pp, is_primary: true }, ...cps.map((c) => ({ ...c, is_primary: false }))],
   })
 
-  const handleCreate = async (e) => {
-    e.preventDefault(); setSaving(true); setCreateError('')
+  const handleCreate = (e) => {
+    e.preventDefault()
+    setCreateError('')
+    setConfirmCreateOpen(true)
+  }
+
+  const handleConfirmedCreate = async () => {
+    setSaving(true); setCreateError('')
     try {
-      await appsApi.create(buildStep1Payload(appForm, newParcel, showNewParcel, primaryProp, coProps))
-      setNewOpen(false); load()
+      const res = await appsApi.create(buildStep1Payload(appForm, newParcel, showNewParcel, primaryProp, coProps))
+      await appsApi.submitStep1(res.data.id, {})
+      setConfirmCreateOpen(false); setNewOpen(false); load()
     } catch (err) {
       const d = err.response?.data
       setCreateError(typeof d === 'object' ? Object.values(d).flat().join(' ') : 'An error occurred.')
+      setConfirmCreateOpen(false)
     } finally { setSaving(false) }
   }
 
@@ -333,7 +345,11 @@ export default function Applications() {
     </div>
   )
 
-  const Step1Fields = ({ af, setAf, pp, setPp, cps, setCps }) => (
+  const Step1Fields = ({ af, setAf, pp, setPp, cps, setCps }) => {
+    const availableParcels = af.application_type === 'new_registration'
+      ? allParcels.filter(p => p.status !== 'registered')
+      : allParcels
+    return (
     <div className="space-y-4">
       {/* Application type & parcel */}
       <div className="space-y-1.5">
@@ -349,7 +365,7 @@ export default function Applications() {
           <SelectTrigger><SelectValue placeholder="Select parcel" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="none">None / New Parcel</SelectItem>
-            {allParcels.map((p) => (
+            {availableParcels.map((p) => (
               <SelectItem key={p.id} value={String(p.id)}>{p.parcel_number} — {p.district_display}</SelectItem>
             ))}
           </SelectContent>
@@ -434,6 +450,7 @@ export default function Applications() {
       </div>
     </div>
   )
+  }
 
   return (
     <div className="space-y-6">
@@ -533,10 +550,66 @@ export default function Applications() {
               <Button type="button" variant="outline" onClick={() => setNewOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={saving}>
                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Application
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+                Submit for Review
               </Button>
             </div>
           </form>
+
+          {/* ── Confirmation modal (nested) ─────────────────────────────────── */}
+          <Dialog open={confirmCreateOpen} onOpenChange={setConfirmCreateOpen}>
+            <DialogContent className="max-w-md">
+              <DialogHeader><DialogTitle>Confirm Submission</DialogTitle></DialogHeader>
+              <div className="space-y-3 my-2">
+                <p className="text-sm text-muted-foreground">
+                  Please verify the details below are correct. Once confirmed, this application will
+                  be sent directly to the Reviewing Officer.
+                </p>
+                <div className="rounded-md border p-3 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Application Type</span>
+                    <span className="font-medium">{APP_TYPE_MAP[appForm.application_type]}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Primary Proprietor</span>
+                    <span className="font-medium">{primaryProp.full_name || '—'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">ID Number</span>
+                    <span className="font-medium">{primaryProp.national_id || '—'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Ownership</span>
+                    <span className="font-medium">{OWNERSHIP_MAP[appForm.ownership_type]}</span>
+                  </div>
+                  {coProps.length > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Co-Proprietors</span>
+                      <span className="font-medium">{coProps.length}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Parcel</span>
+                    <span className="font-medium">
+                      {appForm.parcel !== 'none'
+                        ? (allParcels.find(p => String(p.id) === appForm.parcel)?.parcel_number || `#${appForm.parcel}`)
+                        : showNewParcel
+                          ? (newParcel.parcel_number ? `New: ${newParcel.parcel_number}` : 'New parcel')
+                          : (appForm.parcel_number_requested || 'None selected')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setConfirmCreateOpen(false)}>Back</Button>
+                <Button onClick={handleConfirmedCreate} disabled={saving}>
+                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Confirm &amp; Submit
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </DialogContent>
       </Dialog>
 
@@ -721,13 +794,64 @@ export default function Applications() {
               {actingStep === 1 && (
                 <div className="flex justify-end gap-2 pt-1">
                   <Button variant="outline" onClick={() => setViewOpen(false)}>Close</Button>
-                  <Button onClick={handleStep1Submit} disabled={acting}>
+                  <Button onClick={() => setConfirmStep1Open(true)} disabled={acting}>
                     {acting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     <CheckCircle2 className="mr-2 h-4 w-4" />
                     Submit to Reviewing Officer
                   </Button>
                 </div>
               )}
+
+              {/* ── Step 1 confirmation modal (nested) ─────────────────────── */}
+              <Dialog open={confirmStep1Open} onOpenChange={setConfirmStep1Open}>
+                <DialogContent className="max-w-md">
+                  <DialogHeader><DialogTitle>Confirm Submission</DialogTitle></DialogHeader>
+                  <div className="space-y-3 my-2">
+                    <p className="text-sm text-muted-foreground">
+                      Please verify the details below are correct. Once confirmed, this application
+                      will be sent to the Reviewing Officer.
+                    </p>
+                    <div className="rounded-md border p-3 space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Application Type</span>
+                        <span className="font-medium">{APP_TYPE_MAP[step1AppEdit.application_type]}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Primary Proprietor</span>
+                        <span className="font-medium">{step1PrimaryEdit.full_name || '—'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">ID Number</span>
+                        <span className="font-medium">{step1PrimaryEdit.national_id || '—'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Ownership</span>
+                        <span className="font-medium">{OWNERSHIP_MAP[step1AppEdit.ownership_type]}</span>
+                      </div>
+                      {step1CoPropsEdit.length > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Co-Proprietors</span>
+                          <span className="font-medium">{step1CoPropsEdit.length}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Parcel</span>
+                        <span className="font-medium">
+                          {selected?.parcel_number || selected?.parcel_number_requested || '—'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" onClick={() => setConfirmStep1Open(false)}>Back</Button>
+                    <Button onClick={() => { setConfirmStep1Open(false); handleStep1Submit() }} disabled={acting}>
+                      {acting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      Confirm &amp; Submit
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
 
               {actingStep === 2 && !showReturn && (
                 <div className="flex justify-end gap-2 pt-1">

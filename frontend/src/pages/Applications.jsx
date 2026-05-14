@@ -520,7 +520,7 @@ export default function Applications() {
 
       {/* ── Create Dialog ─────────────────────────────────────────────────────── */}
       <Dialog open={newOpen} onOpenChange={setNewOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl lg:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>New Application</DialogTitle></DialogHeader>
           <form onSubmit={handleCreate} className="space-y-4 mt-2">
             {createError && <p className="text-sm text-destructive">{createError}</p>}
@@ -543,7 +543,7 @@ export default function Applications() {
       {/* ── View / Action Dialog ──────────────────────────────────────────────── */}
       {selected && (
         <Dialog open={viewOpen} onOpenChange={setViewOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl lg:max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 flex-wrap">
                 {selected.application_number}

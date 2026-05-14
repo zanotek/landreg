@@ -120,6 +120,141 @@ function StepHeading({ step, title, completed, name }) {
   )
 }
 
+function ProprietorFields({ value, onChange, label }) {
+  return (
+    <div className="space-y-2 rounded-md border p-3">
+      {label && <p className="text-xs font-semibold text-muted-foreground uppercase">{label}</p>}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1"><Label className="text-xs">Full Name *</Label>
+          <Input required value={value.full_name} onChange={(e) => onChange({ ...value, full_name: e.target.value })} /></div>
+        <div className="space-y-1"><Label className="text-xs">ID Type</Label>
+          <Select value={value.id_type} onValueChange={(v) => onChange({ ...value, id_type: v })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>{ID_TYPES.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
+          </Select></div>
+        <div className="space-y-1"><Label className="text-xs">ID Number *</Label>
+          <Input required value={value.national_id} onChange={(e) => onChange({ ...value, national_id: e.target.value })} /></div>
+        <div className="space-y-1"><Label className="text-xs">Phone</Label>
+          <Input value={value.phone} onChange={(e) => onChange({ ...value, phone: e.target.value })} /></div>
+        <div className="space-y-1"><Label className="text-xs">Email</Label>
+          <Input type="email" value={value.email} onChange={(e) => onChange({ ...value, email: e.target.value })} /></div>
+        <div className="space-y-1 col-span-2"><Label className="text-xs">Address</Label>
+          <Input value={value.address} onChange={(e) => onChange({ ...value, address: e.target.value })} /></div>
+      </div>
+    </div>
+  )
+}
+
+function Step1Fields({
+  af, setAf, pp, setPp, cps, setCps,
+  allParcels, showNewParcel, setShowNewParcel, newParcel, setNewParcel,
+}) {
+  const availableParcels = af.application_type === 'new_registration'
+    ? allParcels.filter(p => p.status !== 'registered')
+    : allParcels
+  return (
+    <div className="space-y-4">
+      {/* Application type & parcel */}
+      <div className="space-y-1.5">
+        <Label>Application Type *</Label>
+        <Select value={af.application_type} onValueChange={(v) => setAf({ ...af, application_type: v })}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>{APP_TYPES.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1.5">
+        <Label>Existing Parcel</Label>
+        <Select value={af.parcel} onValueChange={(v) => { setAf({ ...af, parcel: v }); setShowNewParcel(false) }}>
+          <SelectTrigger><SelectValue placeholder="Select parcel" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">None / New Parcel</SelectItem>
+            {availableParcels.map((p) => (
+              <SelectItem key={p.id} value={String(p.id)}>{p.parcel_number} — {p.district_display}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      {af.parcel === 'none' && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <input type="checkbox" id="showNP" checked={showNewParcel}
+              onChange={(e) => setShowNewParcel(e.target.checked)} className="h-4 w-4" />
+            <label htmlFor="showNP" className="text-sm">Register new parcel inline</label>
+          </div>
+          {showNewParcel ? (
+            <div className="rounded-md border p-3 space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase">New Parcel Details</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1"><Label className="text-xs">Parcel Number *</Label>
+                  <Input required value={newParcel.parcel_number} onChange={(e) => setNewParcel({ ...newParcel, parcel_number: e.target.value })} /></div>
+                <div className="space-y-1"><Label className="text-xs">Area (m²) *</Label>
+                  <Input required type="number" value={newParcel.area_sqm} onChange={(e) => setNewParcel({ ...newParcel, area_sqm: e.target.value })} /></div>
+                <div className="space-y-1"><Label className="text-xs">District *</Label>
+                  <Select value={newParcel.district} onValueChange={(v) => setNewParcel({ ...newParcel, district: v })}>
+                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectContent>{DISTRICTS.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
+                  </Select></div>
+                <div className="space-y-1"><Label className="text-xs">Land Use *</Label>
+                  <Select value={newParcel.land_use} onValueChange={(v) => setNewParcel({ ...newParcel, land_use: v })}>
+                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectContent>{LAND_USE.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
+                  </Select></div>
+                <div className="space-y-1 col-span-2"><Label className="text-xs">Location Description *</Label>
+                  <Textarea rows={2} required value={newParcel.location_description} onChange={(e) => setNewParcel({ ...newParcel, location_description: e.target.value })} /></div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <Label>Requested Parcel Number</Label>
+              <Input value={af.parcel_number_requested} onChange={(e) => setAf({ ...af, parcel_number_requested: e.target.value })} placeholder="e.g. ZNZ-MJN-001" />
+            </div>
+          )}
+        </div>
+      )}
+      <div className="space-y-1.5">
+        <Label>Description</Label>
+        <Textarea rows={2} value={af.description} onChange={(e) => setAf({ ...af, description: e.target.value })} placeholder="Supporting details" />
+      </div>
+      <div className="space-y-1.5">
+        <Label>Scanned Deed URL</Label>
+        <Input type="url" value={af.scanned_deed_url} onChange={(e) => setAf({ ...af, scanned_deed_url: e.target.value })} placeholder="https://…" />
+      </div>
+      <Separator />
+      {/* Proprietors */}
+      <div>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Proprietors</p>
+        <div className="space-y-1.5 mb-3">
+          <Label>Nature of Ownership</Label>
+          <Select value={af.ownership_type} onValueChange={(v) => setAf({ ...af, ownership_type: v })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>{OWNERSHIP_TYPES.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        <ProprietorFields value={pp} onChange={setPp} label="Primary Proprietor" />
+        {cps.map((cp, i) => (
+          <div key={i} className="relative mt-2">
+            <ProprietorFields
+              value={cp}
+              onChange={(v) => { const n = [...cps]; n[i] = v; setCps(n) }}
+              label={`Co-Proprietor ${i + 1}`}
+            />
+            <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6 text-destructive"
+              type="button" onClick={() => setCps(cps.filter((_, j) => j !== i))}>
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        ))}
+        {af.ownership_type !== 'sole' && (
+          <Button type="button" variant="outline" size="sm" className="mt-2 gap-1.5"
+            onClick={() => setCps([...cps, EMPTY_PROPRIETOR(false)])}>
+            <UserPlus className="h-3.5 w-3.5" /> Add Co-Proprietor
+          </Button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function Applications() {
@@ -320,138 +455,6 @@ export default function Applications() {
   const actingStep = selected ? canActOnStep(selected) : null
   const primaryPropDisplay = selected?.proprietors?.find((p) => p.is_primary) ?? selected?.proprietors?.[0]
 
-  // ── Proprietor helpers ────────────────────────────────────────────────────
-
-  const ProprietorFields = ({ value, onChange, label }) => (
-    <div className="space-y-2 rounded-md border p-3">
-      {label && <p className="text-xs font-semibold text-muted-foreground uppercase">{label}</p>}
-      <div className="grid grid-cols-2 gap-2">
-        <div className="space-y-1"><Label className="text-xs">Full Name *</Label>
-          <Input required value={value.full_name} onChange={(e) => onChange({ ...value, full_name: e.target.value })} /></div>
-        <div className="space-y-1"><Label className="text-xs">ID Type</Label>
-          <Select value={value.id_type} onValueChange={(v) => onChange({ ...value, id_type: v })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>{ID_TYPES.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
-          </Select></div>
-        <div className="space-y-1"><Label className="text-xs">ID Number *</Label>
-          <Input required value={value.national_id} onChange={(e) => onChange({ ...value, national_id: e.target.value })} /></div>
-        <div className="space-y-1"><Label className="text-xs">Phone</Label>
-          <Input value={value.phone} onChange={(e) => onChange({ ...value, phone: e.target.value })} /></div>
-        <div className="space-y-1"><Label className="text-xs">Email</Label>
-          <Input type="email" value={value.email} onChange={(e) => onChange({ ...value, email: e.target.value })} /></div>
-        <div className="space-y-1 col-span-2"><Label className="text-xs">Address</Label>
-          <Input value={value.address} onChange={(e) => onChange({ ...value, address: e.target.value })} /></div>
-      </div>
-    </div>
-  )
-
-  const Step1Fields = ({ af, setAf, pp, setPp, cps, setCps }) => {
-    const availableParcels = af.application_type === 'new_registration'
-      ? allParcels.filter(p => p.status !== 'registered')
-      : allParcels
-    return (
-    <div className="space-y-4">
-      {/* Application type & parcel */}
-      <div className="space-y-1.5">
-        <Label>Application Type *</Label>
-        <Select value={af.application_type} onValueChange={(v) => setAf({ ...af, application_type: v })}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>{APP_TYPES.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-1.5">
-        <Label>Existing Parcel</Label>
-        <Select value={af.parcel} onValueChange={(v) => { setAf({ ...af, parcel: v }); setShowNewParcel(false) }}>
-          <SelectTrigger><SelectValue placeholder="Select parcel" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">None / New Parcel</SelectItem>
-            {availableParcels.map((p) => (
-              <SelectItem key={p.id} value={String(p.id)}>{p.parcel_number} — {p.district_display}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      {af.parcel === 'none' && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <input type="checkbox" id="showNP" checked={showNewParcel}
-              onChange={(e) => setShowNewParcel(e.target.checked)} className="h-4 w-4" />
-            <label htmlFor="showNP" className="text-sm">Register new parcel inline</label>
-          </div>
-          {showNewParcel ? (
-            <div className="rounded-md border p-3 space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground uppercase">New Parcel Details</p>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1"><Label className="text-xs">Parcel Number *</Label>
-                  <Input required value={newParcel.parcel_number} onChange={(e) => setNewParcel({ ...newParcel, parcel_number: e.target.value })} /></div>
-                <div className="space-y-1"><Label className="text-xs">Area (m²) *</Label>
-                  <Input required type="number" value={newParcel.area_sqm} onChange={(e) => setNewParcel({ ...newParcel, area_sqm: e.target.value })} /></div>
-                <div className="space-y-1"><Label className="text-xs">District *</Label>
-                  <Select value={newParcel.district} onValueChange={(v) => setNewParcel({ ...newParcel, district: v })}>
-                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                    <SelectContent>{DISTRICTS.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
-                  </Select></div>
-                <div className="space-y-1"><Label className="text-xs">Land Use *</Label>
-                  <Select value={newParcel.land_use} onValueChange={(v) => setNewParcel({ ...newParcel, land_use: v })}>
-                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                    <SelectContent>{LAND_USE.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
-                  </Select></div>
-                <div className="space-y-1 col-span-2"><Label className="text-xs">Location Description *</Label>
-                  <Textarea rows={2} required value={newParcel.location_description} onChange={(e) => setNewParcel({ ...newParcel, location_description: e.target.value })} /></div>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-1.5">
-              <Label>Requested Parcel Number</Label>
-              <Input value={af.parcel_number_requested} onChange={(e) => setAf({ ...af, parcel_number_requested: e.target.value })} placeholder="e.g. ZNZ-MJN-001" />
-            </div>
-          )}
-        </div>
-      )}
-      <div className="space-y-1.5">
-        <Label>Description</Label>
-        <Textarea rows={2} value={af.description} onChange={(e) => setAf({ ...af, description: e.target.value })} placeholder="Supporting details" />
-      </div>
-      <div className="space-y-1.5">
-        <Label>Scanned Deed URL</Label>
-        <Input type="url" value={af.scanned_deed_url} onChange={(e) => setAf({ ...af, scanned_deed_url: e.target.value })} placeholder="https://…" />
-      </div>
-      <Separator />
-      {/* Proprietors */}
-      <div>
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Proprietors</p>
-        <div className="space-y-1.5 mb-3">
-          <Label>Nature of Ownership</Label>
-          <Select value={af.ownership_type} onValueChange={(v) => setAf({ ...af, ownership_type: v })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>{OWNERSHIP_TYPES.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
-          </Select>
-        </div>
-        <ProprietorFields value={pp} onChange={setPp} label="Primary Proprietor" />
-        {cps.map((cp, i) => (
-          <div key={i} className="relative mt-2">
-            <ProprietorFields
-              value={cp}
-              onChange={(v) => { const n = [...cps]; n[i] = v; setCps(n) }}
-              label={`Co-Proprietor ${i + 1}`}
-            />
-            <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6 text-destructive"
-              type="button" onClick={() => setCps(cps.filter((_, j) => j !== i))}>
-              <Trash2 className="h-3 w-3" />
-            </Button>
-          </div>
-        ))}
-        {af.ownership_type !== 'sole' && (
-          <Button type="button" variant="outline" size="sm" className="mt-2 gap-1.5"
-            onClick={() => setCps([...cps, EMPTY_PROPRIETOR(false)])}>
-            <UserPlus className="h-3.5 w-3.5" /> Add Co-Proprietor
-          </Button>
-        )}
-      </div>
-    </div>
-  )
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -545,6 +548,9 @@ export default function Applications() {
               af={appForm} setAf={setAppForm}
               pp={primaryProp} setPp={setPrimaryProp}
               cps={coProps} setCps={setCoProps}
+              allParcels={allParcels}
+              showNewParcel={showNewParcel} setShowNewParcel={setShowNewParcel}
+              newParcel={newParcel} setNewParcel={setNewParcel}
             />
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setNewOpen(false)}>Cancel</Button>
@@ -644,6 +650,9 @@ export default function Applications() {
                     af={step1AppEdit} setAf={setStep1AppEdit}
                     pp={step1PrimaryEdit} setPp={setStep1PrimaryEdit}
                     cps={step1CoPropsEdit} setCps={setStep1CoPropsEdit}
+                    allParcels={allParcels}
+                    showNewParcel={showNewParcel} setShowNewParcel={setShowNewParcel}
+                    newParcel={newParcel} setNewParcel={setNewParcel}
                   />
                 ) : (
                   <div className="space-y-3">

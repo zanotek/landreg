@@ -6,14 +6,16 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import (
-    LandParcel, Application,
-    ApplicationReview, ApplicationApproval,
+    Owner, LandParcel, Application,
+    ApplicationReview, ApplicationApproval, TitleDeed,
 )
 from .serializers import (
     UserSerializer, UserCreateSerializer,
-    LandParcelSerializer,
+    OwnerSerializer,
+    LandParcelSerializer, LandParcelWriteSerializer,
     ApplicationListSerializer, ApplicationStep1Serializer,
     ApplicationReviewWriteSerializer, ApplicationApprovalWriteSerializer,
+    TitleDeedSerializer, TitleDeedWriteSerializer,
 )
 
 
@@ -87,21 +89,39 @@ class UserViewSet(viewsets.ModelViewSet):
 
 # ── Land Parcels ──────────────────────────────────────────────────────────────
 
-class LandParcelViewSet(viewsets.ReadOnlyModelViewSet):
-    """Read-only list/retrieve for parcel selection in forms."""
+class OwnerViewSet(viewsets.ModelViewSet):
+    queryset = Owner.objects.all()
+    serializer_class = OwnerSerializer
+    permission_classes = [IsAdminOrOfficer]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['national_id', 'first_name', 'last_name', 'phone', 'email']
+    ordering = ['last_name', 'first_name']
+
+
+class LandParcelViewSet(viewsets.ModelViewSet):
     queryset = LandParcel.objects.all()
-    serializer_class = LandParcelSerializer
     permission_classes = [IsAdminOrOfficer]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['parcel_number', 'location_description', 'district']
     ordering = ['-created_at']
 
+    def get_serializer_class(self):
+        if self.action in ('create', 'update', 'partial_update'):
+            return LandParcelWriteSerializer
+        return LandParcelSerializer
+
     def get_queryset(self):
         qs = super().get_queryset()
         district = self.request.query_params.get('district')
+        status = self.request.query_params.get('status')
         if district:
             qs = qs.filter(district=district)
+        if status:
+            qs = qs.filter(status=status)
         return qs
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
 
 
 # ── Applications ──────────────────────────────────────────────────────────────
@@ -209,3 +229,32 @@ class ApplicationViewSet(viewsets.ModelViewSet):
 
         app.refresh_from_db()
         return Response(ApplicationListSerializer(app, context={'request': request}).data)
+
+
+# ── Title Deeds ───────────────────────────────────────────────────────────────
+
+class TitleDeedViewSet(viewsets.ModelViewSet):
+    queryset = TitleDeed.objects.select_related('parcel', 'owner', 'registered_by').all()
+    permission_classes = [IsAdminOrOfficer]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = [
+        'deed_number', 'certificate_number',
+        'owner__first_name', 'owner__last_name', 'owner__national_id',
+        'parcel__parcel_number',
+    ]
+    ordering = ['-created_at']
+
+    def get_serializer_class(self):
+        if self.action in ('create', 'update', 'partial_update'):
+            return TitleDeedWriteSerializer
+        return TitleDeedSerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        status = self.request.query_params.get('status')
+        if status:
+            qs = qs.filter(status=status)
+        return qs
+
+    def perform_create(self, serializer):
+        serializer.save(registered_by=self.request.user)

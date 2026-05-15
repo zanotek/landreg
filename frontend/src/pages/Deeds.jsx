@@ -17,10 +17,18 @@ const STATUSES = [
   ['active', 'Active'], ['transferred', 'Transferred'],
   ['cancelled', 'Cancelled'], ['suspended', 'Suspended'],
 ]
+const OWNERSHIP_TYPES = [
+  ['sole', 'Sole Ownership'], ['joint', 'Joint Ownership'], ['company', 'Company'],
+]
 const STATUS_BADGE = {
   active: 'success', transferred: 'info', cancelled: 'destructive', suspended: 'secondary',
 }
-const EMPTY = { deed_number: '', parcel: '', owner: '', registration_date: '', expiry_date: '', status: 'active', notes: '' }
+const EMPTY = {
+  deed_number: '', certificate_number: '', parcel: '', owner: '',
+  ownership_type: '', registration_date: '', first_registration_date: '',
+  issued_date: '', received_from: '', received_date: '', received_by: '',
+  expiry_date: '', status: 'active', notes: '',
+}
 
 export default function Deeds() {
   const [data, setData] = useState([])
@@ -57,7 +65,15 @@ export default function Deeds() {
 
   const openEdit = async (d) => {
     setEditing(d)
-    setForm({ ...d, parcel: d.parcel?.toString(), owner: d.owner?.toString() })
+    setForm({
+      ...d,
+      parcel: d.parcel?.toString(),
+      owner: d.owner?.toString(),
+      first_registration_date: d.first_registration_date || '',
+      issued_date: d.issued_date || '',
+      received_date: d.received_date || '',
+      expiry_date: d.expiry_date || '',
+    })
     setError('')
     const [p, o] = await Promise.all([
       parcelsApi.list({ page_size: 200 }),
@@ -71,7 +87,17 @@ export default function Deeds() {
   const handleSave = async (e) => {
     e.preventDefault(); setSaving(true); setError('')
     try {
-      const payload = { ...form, parcel: Number(form.parcel), owner: Number(form.owner), expiry_date: form.expiry_date || null }
+      const nullDate = (v) => v || null
+      const payload = {
+        ...form,
+        parcel: Number(form.parcel),
+        owner: Number(form.owner),
+        ownership_type: form.ownership_type || '',
+        first_registration_date: nullDate(form.first_registration_date),
+        issued_date: nullDate(form.issued_date),
+        received_date: nullDate(form.received_date),
+        expiry_date: nullDate(form.expiry_date),
+      }
       if (editing) await deedsApi.update(editing.id, payload)
       else await deedsApi.create(payload)
       setOpen(false); load()
@@ -155,19 +181,20 @@ export default function Deeds() {
           </DialogHeader>
           <form onSubmit={handleSave} className="space-y-4 mt-2">
             {error && <p className="text-sm text-destructive">{error}</p>}
+
+            {/* Reference */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Deed Number *</Label>
                 <Input required value={form.deed_number} onChange={set('deed_number')} placeholder="e.g. TD-2024-0001" />
               </div>
               <div className="space-y-1.5">
-                <Label>Status</Label>
-                <Select value={form.status} onValueChange={setV('status')}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{STATUSES.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
-                </Select>
+                <Label>Certificate Number</Label>
+                <Input value={form.certificate_number} onChange={set('certificate_number')} placeholder="e.g. CERT-001" />
               </div>
             </div>
+
+            {/* Parties */}
             <div className="space-y-1.5">
               <Label>Parcel *</Label>
               <Select value={form.parcel} onValueChange={setV('parcel')}>
@@ -192,14 +219,57 @@ export default function Deeds() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
+                <Label>Ownership Type</Label>
+                <Select value={form.ownership_type || ''} onValueChange={setV('ownership_type')}>
+                  <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                  <SelectContent>{OWNERSHIP_TYPES.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Status</Label>
+                <Select value={form.status} onValueChange={setV('status')}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{STATUSES.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Dates */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
                 <Label>Registration Date *</Label>
                 <Input required type="date" value={form.registration_date} onChange={set('registration_date')} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>First Registration Date</Label>
+                <Input type="date" value={form.first_registration_date || ''} onChange={set('first_registration_date')} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Issued Date</Label>
+                <Input type="date" value={form.issued_date || ''} onChange={set('issued_date')} />
               </div>
               <div className="space-y-1.5">
                 <Label>Expiry Date</Label>
                 <Input type="date" value={form.expiry_date || ''} onChange={set('expiry_date')} />
               </div>
             </div>
+
+            {/* Receipt */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Received From</Label>
+                <Input value={form.received_from} onChange={set('received_from')} placeholder="Person or entity" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Received Date</Label>
+                <Input type="date" value={form.received_date || ''} onChange={set('received_date')} />
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label>Received By</Label>
+                <Input value={form.received_by} onChange={set('received_by')} placeholder="Officer / recipient name" />
+              </div>
+            </div>
+
             <div className="space-y-1.5">
               <Label>Notes</Label>
               <Textarea value={form.notes} onChange={set('notes')} placeholder="Additional remarks…" />

@@ -1,8 +1,8 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from .models import (
-    UserProfile, LandParcel, Application,
-    Proprietor, ApplicationReview, ApplicationApproval,
+    Owner, UserProfile, LandParcel, Application,
+    Proprietor, ApplicationReview, ApplicationApproval, TitleDeed,
 )
 
 
@@ -234,3 +234,59 @@ class ApplicationStep1Serializer(serializers.ModelSerializer):
             for p in proprietors_data:
                 Proprietor.objects.create(application=instance, **p)
         return instance
+
+
+# ── Owner ─────────────────────────────────────────────────────────────────────
+
+class OwnerSerializer(serializers.ModelSerializer):
+    full_name = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = Owner
+        fields = [
+            'id', 'national_id', 'first_name', 'last_name', 'full_name',
+            'phone', 'email', 'address', 'created_at',
+        ]
+
+
+# ── TitleDeed ─────────────────────────────────────────────────────────────────
+
+class TitleDeedSerializer(serializers.ModelSerializer):
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    ownership_type_display = serializers.CharField(
+        source='get_ownership_type_display', read_only=True
+    )
+    parcel_number = serializers.CharField(source='parcel.parcel_number', read_only=True)
+    owner_name = serializers.CharField(source='owner.full_name', read_only=True)
+    owner_national_id = serializers.CharField(source='owner.national_id', read_only=True)
+    registered_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TitleDeed
+        fields = [
+            'id', 'deed_number',
+            'parcel', 'parcel_number',
+            'owner', 'owner_name', 'owner_national_id',
+            'registered_by', 'registered_by_name',
+            'ownership_type', 'ownership_type_display',
+            'certificate_number',
+            'registration_date', 'first_registration_date', 'issued_date',
+            'received_from', 'received_date', 'received_by',
+            'expiry_date', 'status', 'status_display', 'notes',
+            'created_at',
+        ]
+
+    def get_registered_by_name(self, obj):
+        return _officer_name(obj.registered_by)
+
+
+class TitleDeedWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TitleDeed
+        fields = [
+            'deed_number', 'parcel', 'owner',
+            'ownership_type', 'certificate_number',
+            'registration_date', 'first_registration_date', 'issued_date',
+            'received_from', 'received_date', 'received_by',
+            'expiry_date', 'status', 'notes',
+        ]

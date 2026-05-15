@@ -3,6 +3,27 @@ from django.db import models
 from django.contrib.auth.models import User
 
 
+class Owner(models.Model):
+    national_id = models.CharField(max_length=50, unique=True)
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    phone = models.CharField(max_length=20)
+    email = models.EmailField(blank=True)
+    address = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['last_name', 'first_name']
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name} ({self.national_id})"
+
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}"
+
+
 class UserProfile(models.Model):
     ROLE_CHOICES = [
         ('admin', 'Administrator'),
@@ -218,3 +239,45 @@ class ApplicationApproval(models.Model):
 
     def __str__(self):
         return f"Approval – {self.application.application_number}"
+
+
+class TitleDeed(models.Model):
+    OWNERSHIP_CHOICES = [
+        ('sole', 'Sole Ownership'),
+        ('joint', 'Joint Ownership'),
+        ('company', 'Company'),
+    ]
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('transferred', 'Transferred'),
+        ('cancelled', 'Cancelled'),
+        ('suspended', 'Suspended'),
+    ]
+
+    deed_number = models.CharField(max_length=50, unique=True)
+    parcel = models.ForeignKey(LandParcel, on_delete=models.PROTECT, related_name='deeds')
+    owner = models.ForeignKey(Owner, on_delete=models.PROTECT, related_name='deeds')
+    registered_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, related_name='deeds_registered'
+    )
+    ownership_type = models.CharField(
+        max_length=10, choices=OWNERSHIP_CHOICES, blank=True
+    )
+    certificate_number = models.CharField(max_length=50, blank=True)
+    registration_date = models.DateField()
+    first_registration_date = models.DateField(null=True, blank=True)
+    issued_date = models.DateField(null=True, blank=True)
+    received_from = models.CharField(max_length=200, blank=True)
+    received_date = models.DateField(null=True, blank=True)
+    received_by = models.CharField(max_length=200, blank=True)
+    expiry_date = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Deed {self.deed_number}"

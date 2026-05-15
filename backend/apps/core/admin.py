@@ -1,8 +1,38 @@
 from django.contrib import admin
 from .models import (
-    UserProfile, LandParcel, Application,
-    Proprietor, ApplicationReview, ApplicationApproval,
+    Owner, UserProfile, LandParcel, Application,
+    Proprietor, ApplicationReview, ApplicationApproval, TitleDeed,
 )
+
+
+@admin.register(Owner)
+class OwnerAdmin(admin.ModelAdmin):
+    list_display = ['national_id', 'first_name', 'last_name', 'phone', 'email', 'created_at']
+    search_fields = ['national_id', 'first_name', 'last_name', 'email']
+
+
+@admin.register(TitleDeed)
+class TitleDeedAdmin(admin.ModelAdmin):
+    list_display = ['deed_number', 'certificate_number', 'parcel', 'owner', 'ownership_type', 'registration_date', 'status']
+    list_filter = ['status', 'ownership_type']
+    search_fields = ['deed_number', 'certificate_number', 'owner__national_id', 'owner__last_name', 'parcel__parcel_number']
+    fieldsets = [
+        ('Reference', {
+            'fields': ['deed_number', 'certificate_number', 'status', 'notes'],
+        }),
+        ('Parties', {
+            'fields': ['parcel', 'owner', 'registered_by', 'ownership_type'],
+        }),
+        ('Dates', {
+            'fields': [
+                'registration_date', 'first_registration_date',
+                'issued_date', 'expiry_date',
+            ],
+        }),
+        ('Receipt', {
+            'fields': ['received_from', 'received_date', 'received_by'],
+        }),
+    ]
 
 
 @admin.register(UserProfile)

@@ -149,6 +149,9 @@ class Application(models.Model):
     )
     scanned_deed_url = models.URLField(blank=True)
     description = models.TextField(blank=True)
+    received_from = models.CharField(max_length=200, blank=True)
+    received_date = models.DateField(null=True, blank=True)
+    received_by = models.CharField(max_length=200, blank=True)
 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='step1')
     returned_to_step = models.IntegerField(null=True, blank=True)
@@ -215,6 +218,9 @@ class ApplicationReview(models.Model):
     instrument_type = models.CharField(
         max_length=20, choices=INSTRUMENT_CHOICES, blank=True
     )
+    certificate_number = models.CharField(max_length=50, blank=True)
+    first_registration_date = models.DateField(null=True, blank=True)
+    issued_date = models.DateField(null=True, blank=True)
     reviewer_notes = models.TextField(blank=True)
     reviewed_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True,

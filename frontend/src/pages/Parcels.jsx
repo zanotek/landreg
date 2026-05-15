@@ -20,6 +20,13 @@ const DISTRICTS = [
   ['chake_chake', 'Chake Chake'], ['mkoani', 'Mkoani'],
   ['wete', 'Wete'], ['micheweni', 'Micheweni'],
 ]
+const REGIONS = [
+  ['mjini_magharibi', 'Mjini Magharibi'],
+  ['kaskazini_unguja', 'Kaskazini Unguja'],
+  ['kusini_unguja', 'Kusini Unguja'],
+  ['kaskazini_pemba', 'Kaskazini Pemba'],
+  ['kusini_pemba', 'Kusini Pemba'],
+]
 const LAND_USE = [
   ['residential', 'Residential'], ['commercial', 'Commercial'],
   ['agricultural', 'Agricultural'], ['industrial', 'Industrial'],
@@ -35,7 +42,11 @@ const STATUS_BADGE = {
   pending: 'warning', disputed: 'destructive', suspended: 'secondary',
 }
 
-const EMPTY = { parcel_number: '', district: '', area_sqm: '', land_use: '', location_description: '', status: 'available' }
+const EMPTY = {
+  parcel_number: '', zupin: '', house_number: '',
+  district: '', region: '', shehia: '',
+  area_sqm: '', land_use: '', location_description: '', status: 'available',
+}
 
 export default function Parcels() {
   const [data, setData] = useState([])
@@ -190,10 +201,41 @@ export default function Parcels() {
                   placeholder="e.g. ZNZ-MJN-001" />
               </div>
               <div className="space-y-1.5">
+                <Label>ZUPIN</Label>
+                <Input value={form.zupin}
+                  onChange={(e) => setForm({ ...form, zupin: e.target.value })}
+                  placeholder="Zanzibar Unique Parcel ID" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>House No.</Label>
+                <Input value={form.house_number}
+                  onChange={(e) => setForm({ ...form, house_number: e.target.value })}
+                  placeholder="Optional" />
+              </div>
+              <div className="space-y-1.5">
                 <Label>Area (m²) *</Label>
                 <Input required type="number" min="1" step="0.01" value={form.area_sqm}
                   onChange={(e) => setForm({ ...form, area_sqm: e.target.value })}
                   placeholder="e.g. 500" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Region</Label>
+                <Select value={form.region || ''} onValueChange={(v) => setForm({ ...form, region: v })}>
+                  <SelectTrigger><SelectValue placeholder="Select region" /></SelectTrigger>
+                  <SelectContent>
+                    {REGIONS.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Shehia</Label>
+                <Input value={form.shehia}
+                  onChange={(e) => setForm({ ...form, shehia: e.target.value })}
+                  placeholder="e.g. Mwanakwerekwe" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">

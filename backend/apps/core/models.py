@@ -31,6 +31,14 @@ ZANZIBAR_DISTRICTS = [
     ('micheweni', 'Micheweni (Pemba)'),
 ]
 
+ZANZIBAR_REGIONS = [
+    ('mjini_magharibi', 'Mjini Magharibi'),
+    ('kaskazini_unguja', 'Kaskazini Unguja'),
+    ('kusini_unguja', 'Kusini Unguja'),
+    ('kaskazini_pemba', 'Kaskazini Pemba'),
+    ('kusini_pemba', 'Kusini Pemba'),
+]
+
 INSTRUMENT_CHOICES = [
     ('first_registration', 'First Registration'),
     ('transfer', 'Transfer'),
@@ -60,7 +68,11 @@ class LandParcel(models.Model):
     ]
 
     parcel_number = models.CharField(max_length=50, unique=True)
+    zupin = models.CharField(max_length=50, unique=True, null=True, blank=True)
+    house_number = models.CharField(max_length=20, blank=True)
     district = models.CharField(max_length=50, choices=ZANZIBAR_DISTRICTS)
+    region = models.CharField(max_length=20, choices=ZANZIBAR_REGIONS, blank=True)
+    shehia = models.CharField(max_length=100, blank=True)
     area_sqm = models.DecimalField(max_digits=12, decimal_places=2)
     land_use = models.CharField(max_length=20, choices=LAND_USE_CHOICES)
     location_description = models.TextField()

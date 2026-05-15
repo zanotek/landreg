@@ -58,11 +58,14 @@ class LandParcelSerializer(serializers.ModelSerializer):
     district_display = serializers.CharField(source='get_district_display', read_only=True)
     land_use_display = serializers.CharField(source='get_land_use_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
+    region_display = serializers.CharField(source='get_region_display', read_only=True)
 
     class Meta:
         model = LandParcel
         fields = [
-            'id', 'parcel_number', 'district', 'district_display',
+            'id', 'parcel_number', 'zupin', 'house_number',
+            'district', 'district_display',
+            'region', 'region_display', 'shehia',
             'area_sqm', 'land_use', 'land_use_display',
             'location_description', 'ward', 'village_or_block', 'encumbrances',
             'status', 'status_display', 'created_at',
@@ -73,7 +76,9 @@ class LandParcelWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = LandParcel
         fields = [
-            'parcel_number', 'district', 'area_sqm', 'land_use',
+            'parcel_number', 'zupin', 'house_number',
+            'district', 'region', 'shehia',
+            'area_sqm', 'land_use',
             'location_description', 'ward', 'village_or_block', 'encumbrances',
         ]
 

@@ -55,6 +55,13 @@ const LAND_USE = [
   ['agricultural', 'Agricultural'], ['industrial', 'Industrial'],
   ['institutional', 'Institutional'], ['mixed', 'Mixed Use'],
 ]
+const REGIONS = [
+  ['mjini_magharibi', 'Mjini Magharibi'],
+  ['kaskazini_unguja', 'Kaskazini Unguja'],
+  ['kusini_unguja', 'Kusini Unguja'],
+  ['kaskazini_pemba', 'Kaskazini Pemba'],
+  ['kusini_pemba', 'Kusini Pemba'],
+]
 const STATUSES = [
   ['step1', 'Step 1 – Data Entry'],
   ['step2', 'Step 2 – Under Review'],
@@ -82,8 +89,9 @@ const EMPTY_APP = {
   description: '',
 }
 const EMPTY_PARCEL = {
-  parcel_number: '', district: '', area_sqm: '',
-  land_use: '', location_description: '',
+  parcel_number: '', zupin: '', house_number: '',
+  district: '', region: '', shehia: '',
+  area_sqm: '', land_use: '', location_description: '',
 }
 const EMPTY_PROPRIETOR = (is_primary = false) => ({
   full_name: '', national_id: '', id_type: 'national_id',
@@ -187,8 +195,19 @@ function Step1Fields({
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1"><Label className="text-xs">Parcel Number *</Label>
                   <Input required value={newParcel.parcel_number} onChange={(e) => setNewParcel({ ...newParcel, parcel_number: e.target.value })} /></div>
+                <div className="space-y-1"><Label className="text-xs">ZUPIN</Label>
+                  <Input value={newParcel.zupin} onChange={(e) => setNewParcel({ ...newParcel, zupin: e.target.value })} placeholder="Zanzibar Unique Parcel ID" /></div>
+                <div className="space-y-1"><Label className="text-xs">House No.</Label>
+                  <Input value={newParcel.house_number} onChange={(e) => setNewParcel({ ...newParcel, house_number: e.target.value })} placeholder="Optional" /></div>
                 <div className="space-y-1"><Label className="text-xs">Area (m²) *</Label>
                   <Input required type="number" value={newParcel.area_sqm} onChange={(e) => setNewParcel({ ...newParcel, area_sqm: e.target.value })} /></div>
+                <div className="space-y-1"><Label className="text-xs">Region</Label>
+                  <Select value={newParcel.region || ''} onValueChange={(v) => setNewParcel({ ...newParcel, region: v })}>
+                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectContent>{REGIONS.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
+                  </Select></div>
+                <div className="space-y-1"><Label className="text-xs">Shehia</Label>
+                  <Input value={newParcel.shehia} onChange={(e) => setNewParcel({ ...newParcel, shehia: e.target.value })} placeholder="e.g. Mwanakwerekwe" /></div>
                 <div className="space-y-1"><Label className="text-xs">District *</Label>
                   <Select value={newParcel.district} onValueChange={(v) => setNewParcel({ ...newParcel, district: v })}>
                     <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
@@ -674,8 +693,12 @@ export default function Applications() {
                       <>
                         <Separator />
                         <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                          {selected.parcel_detail.zupin && <Field label="ZUPIN" value={selected.parcel_detail.zupin} />}
+                          {selected.parcel_detail.house_number && <Field label="House No." value={selected.parcel_detail.house_number} />}
                           <Field label="District" value={selected.parcel_detail.district_display} />
                           <Field label="Area" value={selected.parcel_detail.area_sqm ? `${selected.parcel_detail.area_sqm} m²` : null} />
+                          {selected.parcel_detail.region_display && <Field label="Region" value={selected.parcel_detail.region_display} />}
+                          {selected.parcel_detail.shehia && <Field label="Shehia" value={selected.parcel_detail.shehia} />}
                           <Field label="Land Use" value={selected.parcel_detail.land_use_display} />
                           {selected.parcel_detail.ward && <Field label="Ward" value={selected.parcel_detail.ward} />}
                           {selected.parcel_detail.village_or_block && <Field label="Village / Block" value={selected.parcel_detail.village_or_block} />}

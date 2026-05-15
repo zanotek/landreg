@@ -109,7 +109,6 @@ class ApplicationReviewSerializer(serializers.ModelSerializer):
         fields = [
             'registration_number', 'volume_ref', 'folio_ref',
             'registration_entry_date', 'instrument_type', 'instrument_type_display',
-            'certificate_number', 'first_registration_date', 'issued_date',
             'reviewer_notes', 'reviewed_by_name', 'reviewed_at',
         ]
 
@@ -122,9 +121,7 @@ class ApplicationReviewWriteSerializer(serializers.ModelSerializer):
         model = ApplicationReview
         fields = [
             'registration_number', 'volume_ref', 'folio_ref',
-            'registration_entry_date', 'instrument_type',
-            'certificate_number', 'first_registration_date', 'issued_date',
-            'reviewer_notes',
+            'registration_entry_date', 'instrument_type', 'reviewer_notes',
         ]
 
 
@@ -175,6 +172,7 @@ class ApplicationListSerializer(serializers.ModelSerializer):
             'parcel_number_requested',
             'ownership_type', 'ownership_type_display',
             'scanned_deed_url', 'description',
+            'certificate_number', 'first_registration_date', 'issued_date',
             'received_from', 'received_date', 'received_by',
             'status', 'status_display',
             'returned_to_step', 'return_reason',
@@ -198,6 +196,7 @@ class ApplicationStep1Serializer(serializers.ModelSerializer):
         fields = [
             'application_type', 'parcel', 'parcel_number_requested',
             'ownership_type', 'scanned_deed_url', 'description',
+            'certificate_number', 'first_registration_date', 'issued_date',
             'received_from', 'received_date', 'received_by',
             'proprietors', 'new_parcel',
         ]

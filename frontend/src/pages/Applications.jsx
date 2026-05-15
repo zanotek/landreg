@@ -87,6 +87,9 @@ const EMPTY_APP = {
   ownership_type: 'sole',
   scanned_deed_url: '',
   description: '',
+  certificate_number: '',
+  first_registration_date: '',
+  issued_date: '',
   received_from: '',
   received_date: '',
   received_by: '',
@@ -102,9 +105,7 @@ const EMPTY_PROPRIETOR = (is_primary = false) => ({
 })
 const EMPTY_STEP2 = {
   registration_number: '', volume_ref: '', folio_ref: '',
-  registration_entry_date: '', instrument_type: '',
-  certificate_number: '', first_registration_date: '', issued_date: '',
-  reviewer_notes: '',
+  registration_entry_date: '', instrument_type: '', reviewer_notes: '',
 }
 const EMPTY_STEP3 = { registrar_notes: '' }
 const EMPTY_RETURN = { returned_to_step: '', return_reason: '' }
@@ -244,10 +245,22 @@ function Step1Fields({
         <Input type="url" value={af.scanned_deed_url} onChange={(e) => setAf({ ...af, scanned_deed_url: e.target.value })} placeholder="https://…" />
       </div>
       <Separator />
-      {/* Receipt info */}
+      {/* Title information */}
       <div>
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Document Receipt</p>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Title Information</p>
         <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5 col-span-2">
+            <Label>Certificate Number</Label>
+            <Input value={af.certificate_number} onChange={(e) => setAf({ ...af, certificate_number: e.target.value })} placeholder="e.g. CERT-001" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>First Registration Date</Label>
+            <Input type="date" value={af.first_registration_date} onChange={(e) => setAf({ ...af, first_registration_date: e.target.value })} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Issued Date</Label>
+            <Input type="date" value={af.issued_date} onChange={(e) => setAf({ ...af, issued_date: e.target.value })} />
+          </div>
           <div className="space-y-1.5 col-span-2">
             <Label>Received From</Label>
             <Input value={af.received_from} onChange={(e) => setAf({ ...af, received_from: e.target.value })} placeholder="Person or entity" />
@@ -408,6 +421,9 @@ export default function Applications() {
       ownership_type: app.ownership_type || 'sole',
       scanned_deed_url: app.scanned_deed_url || '',
       description: app.description || '',
+      certificate_number: app.certificate_number || '',
+      first_registration_date: app.first_registration_date || '',
+      issued_date: app.issued_date || '',
       received_from: app.received_from || '',
       received_date: app.received_date || '',
       received_by: app.received_by || '',
@@ -420,9 +436,6 @@ export default function Applications() {
       folio_ref: app.review?.folio_ref || '',
       registration_entry_date: app.review?.registration_entry_date || '',
       instrument_type: app.review?.instrument_type || '',
-      certificate_number: app.review?.certificate_number || '',
-      first_registration_date: app.review?.first_registration_date || '',
-      issued_date: app.review?.issued_date || '',
       reviewer_notes: app.review?.reviewer_notes || '',
     })
     setStep3Form({ registrar_notes: app.approval?.registrar_notes || '' })
@@ -717,6 +730,9 @@ export default function Applications() {
                             className="text-sm text-primary underline">View</a>
                         </div>
                       )}
+                      {selected.certificate_number && <Field label="Certificate Number" value={selected.certificate_number} />}
+                      {selected.first_registration_date && <Field label="First Reg. Date" value={selected.first_registration_date} />}
+                      {selected.issued_date && <Field label="Issued Date" value={selected.issued_date} />}
                       {selected.received_from && <Field label="Received From" value={selected.received_from} />}
                       {selected.received_date && <Field label="Received Date" value={selected.received_date} />}
                       {selected.received_by && <Field label="Received By" value={selected.received_by} />}
@@ -799,21 +815,6 @@ export default function Applications() {
                           <Input type="date" value={step2Form.registration_entry_date}
                             onChange={(e) => setStep2Form({ ...step2Form, registration_entry_date: e.target.value })} />
                         </div>
-                        <div className="space-y-1.5">
-                          <Label>Certificate Number</Label>
-                          <Input value={step2Form.certificate_number}
-                            onChange={(e) => setStep2Form({ ...step2Form, certificate_number: e.target.value })} />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label>First Registration Date</Label>
-                          <Input type="date" value={step2Form.first_registration_date}
-                            onChange={(e) => setStep2Form({ ...step2Form, first_registration_date: e.target.value })} />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label>Issued Date</Label>
-                          <Input type="date" value={step2Form.issued_date}
-                            onChange={(e) => setStep2Form({ ...step2Form, issued_date: e.target.value })} />
-                        </div>
                       </div>
                       <div className="space-y-1.5">
                         <Label>Notes for Registrar</Label>
@@ -828,9 +829,6 @@ export default function Applications() {
                       <Field label="Volume" value={selected.review.volume_ref} />
                       <Field label="Folio" value={selected.review.folio_ref} />
                       <Field label="Entry Date" value={selected.review.registration_entry_date} />
-                      {selected.review.certificate_number && <Field label="Certificate Number" value={selected.review.certificate_number} />}
-                      {selected.review.first_registration_date && <Field label="First Reg. Date" value={selected.review.first_registration_date} />}
-                      {selected.review.issued_date && <Field label="Issued Date" value={selected.review.issued_date} />}
                       {selected.review.reviewer_notes && (
                         <div className="col-span-2">
                           <Field label="Reviewer Notes" value={selected.review.reviewer_notes} />

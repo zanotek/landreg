@@ -8,7 +8,22 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        # Application receipt fields (Step 1)
+        # Application — all Step 1 title/receipt fields
+        migrations.AddField(
+            model_name='application',
+            name='certificate_number',
+            field=models.CharField(blank=True, max_length=50),
+        ),
+        migrations.AddField(
+            model_name='application',
+            name='first_registration_date',
+            field=models.DateField(blank=True, null=True),
+        ),
+        migrations.AddField(
+            model_name='application',
+            name='issued_date',
+            field=models.DateField(blank=True, null=True),
+        ),
         migrations.AddField(
             model_name='application',
             name='received_from',
@@ -23,21 +38,5 @@ class Migration(migrations.Migration):
             model_name='application',
             name='received_by',
             field=models.CharField(blank=True, max_length=200),
-        ),
-        # ApplicationReview title fields (Step 2)
-        migrations.AddField(
-            model_name='applicationreview',
-            name='certificate_number',
-            field=models.CharField(blank=True, max_length=50),
-        ),
-        migrations.AddField(
-            model_name='applicationreview',
-            name='first_registration_date',
-            field=models.DateField(blank=True, null=True),
-        ),
-        migrations.AddField(
-            model_name='applicationreview',
-            name='issued_date',
-            field=models.DateField(blank=True, null=True),
         ),
     ]

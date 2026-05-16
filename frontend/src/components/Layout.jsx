@@ -3,13 +3,16 @@ import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import {
-  LayoutDashboard, ClipboardList, LogOut, Building2,
+  LayoutDashboard, ClipboardList, LogOut, Building2, Users, MapPin, FileText,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/applications', label: 'Applications', icon: ClipboardList },
+  { to: '/owners', label: 'Owners', icon: Users },
+  { to: '/parcels', label: 'Parcels', icon: MapPin },
+  { to: '/deeds', label: 'Title Deeds', icon: FileText },
 ]
 
 export default function Layout({ children }) {

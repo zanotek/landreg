@@ -76,11 +76,13 @@ class LandParcelWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = LandParcel
         fields = [
+            'id',
             'parcel_number', 'zupin', 'house_number',
             'district', 'region', 'shehia',
             'area_sqm', 'land_use',
             'location_description', 'ward', 'village_or_block', 'encumbrances',
         ]
+        read_only_fields = ['id']
 
 
 # ── Proprietor ────────────────────────────────────────────────────────────────
@@ -289,9 +291,11 @@ class TitleDeedWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = TitleDeed
         fields = [
+            'id',
             'deed_number', 'parcel', 'owner',
             'ownership_type', 'certificate_number',
             'registration_date', 'first_registration_date', 'issued_date',
             'received_from', 'received_date', 'received_by',
             'expiry_date', 'status', 'notes',
         ]
+        read_only_fields = ['id']

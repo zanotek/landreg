@@ -72,9 +72,11 @@ class StatsView(APIView):
 # ── User management ───────────────────────────────────────────────────────────
 
 class UserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.select_related('profile').all()
-    filter_backends = [filters.SearchFilter]
+    queryset = User.objects.select_related('profile').order_by('username')
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['username', 'email', 'first_name', 'last_name']
+    ordering_fields = ['username', 'email']
+    ordering = ['username']
 
     def get_permissions(self):
         if self.action == 'create':

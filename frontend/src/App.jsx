@@ -5,6 +5,9 @@ import Layout from '@/components/Layout'
 import Login from '@/pages/Login'
 import Dashboard from '@/pages/Dashboard'
 import Applications from '@/pages/Applications'
+import Owners from '@/pages/Owners'
+import Parcels from '@/pages/Parcels'
+import Deeds from '@/pages/Deeds'
 
 class ErrorBoundary extends Component {
   state = { error: null }
@@ -41,6 +44,9 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/" element={<ProtectedLayout><Dashboard /></ProtectedLayout>} />
       <Route path="/applications" element={<ProtectedLayout><Applications /></ProtectedLayout>} />
+      <Route path="/owners" element={<ProtectedLayout><Owners /></ProtectedLayout>} />
+      <Route path="/parcels" element={<ProtectedLayout><Parcels /></ProtectedLayout>} />
+      <Route path="/deeds" element={<ProtectedLayout><Deeds /></ProtectedLayout>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

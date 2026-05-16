@@ -10,7 +10,20 @@
       "Bash(git rm *)",
       "Skill(claude-api)",
       "Bash(python3 *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(pnpm dev *)",
+      "Bash(curl -s http://localhost:5173)",
+      "Bash(pnpm install *)",
+      "Bash(wait)",
+      "Bash(python manage.py makemigrations core --name \"add_parcel_zupin_house_region_shehia\")",
+      "Bash(pip3 show *)",
+      "Bash(pip show *)",
+      "Bash(git -C /Users/livinglab/landreg status)",
+      "Bash(git -C /Users/livinglab/landreg diff --stat)",
+      "Bash(git -C /Users/livinglab/landreg add backend/apps/core/models.py backend/apps/core/serializers.py backend/apps/core/migrations/0004_parcel_zupin_house_region_shehia.py frontend/src/pages/Parcels.jsx frontend/src/pages/Applications.jsx)",
+      "Bash(git -C /Users/livinglab/landreg commit -m ' *)",
+      "Bash(git *)",
+      "Bash(xargs cat)"
     ]
   }
 }

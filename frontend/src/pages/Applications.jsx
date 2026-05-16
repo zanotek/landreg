@@ -384,12 +384,18 @@ export default function Applications() {
     setNewOpen(true)
   }
 
-  const buildStep1Payload = (af, np, showNP, pp, cps) => ({
-    ...af,
-    parcel: af.parcel !== 'none' ? Number(af.parcel) : null,
-    ...(showNP && af.parcel === 'none' ? { new_parcel: np } : {}),
-    proprietors: [{ ...pp, is_primary: true }, ...cps.map((c) => ({ ...c, is_primary: false }))],
-  })
+  const buildStep1Payload = (af, np, showNP, pp, cps) => {
+    const nullDate = (v) => v || null
+    return {
+      ...af,
+      parcel: af.parcel !== 'none' ? Number(af.parcel) : null,
+      first_registration_date: nullDate(af.first_registration_date),
+      issued_date: nullDate(af.issued_date),
+      received_date: nullDate(af.received_date),
+      ...(showNP && af.parcel === 'none' ? { new_parcel: np } : {}),
+      proprietors: [{ ...pp, is_primary: true }, ...cps.map((c) => ({ ...c, is_primary: false }))],
+    }
+  }
 
   const handleCreate = (e) => {
     e.preventDefault()

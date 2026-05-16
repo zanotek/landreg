@@ -194,6 +194,7 @@ class ApplicationStep1Serializer(serializers.ModelSerializer):
     class Meta:
         model = Application
         fields = [
+            'id',
             'application_type', 'parcel', 'parcel_number_requested',
             'ownership_type', 'scanned_deed_url', 'description',
             'certificate_number', 'first_registration_date', 'issued_date',

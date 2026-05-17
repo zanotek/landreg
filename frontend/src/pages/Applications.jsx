@@ -435,8 +435,7 @@ export default function Applications() {
   const handleConfirmedCreate = async () => {
     setSaving(true); setCreateError('')
     try {
-      const res = await appsApi.create(buildStep1Payload(appForm, newParcel, showNewParcel, primaryProp, coProps))
-      await appsApi.submitStep1(res.data.id, {})
+      await appsApi.create(buildStep1Payload(appForm, newParcel, showNewParcel, primaryProp, coProps))
       setConfirmCreateOpen(false); setNewOpen(false); load()
     } catch (err) {
       const d = err.response?.data

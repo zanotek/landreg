@@ -165,6 +165,13 @@ class ApplicationViewSet(viewsets.ModelViewSet):
         ctx['request'] = self.request
         return ctx
 
+    def perform_create(self, serializer):
+        serializer.save(
+            status='step2',
+            step1_by=self.request.user,
+            step1_at=timezone.now(),
+        )
+
     @action(detail=True, methods=['patch'], url_path='submit-step1')
     def submit_step1(self, request, pk=None):
         """Data Entry Officer submits Step 1, advancing to Step 2."""

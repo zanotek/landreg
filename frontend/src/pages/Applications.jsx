@@ -186,10 +186,6 @@ function Step1Fields({
             <Label>Description</Label>
             <Textarea rows={2} value={af.description} onChange={(e) => setAf({ ...af, description: e.target.value })} placeholder="Supporting details" />
           </div>
-          <div className="space-y-1.5">
-            <Label>Scanned Deed URL</Label>
-            <Input type="url" value={af.scanned_deed_url} onChange={(e) => setAf({ ...af, scanned_deed_url: e.target.value })} placeholder="https://…" />
-          </div>
         </div>
       </div>
 
@@ -294,6 +290,10 @@ function Step1Fields({
               <UserPlus className="h-3.5 w-3.5" /> Add Co-Proprietor
             </Button>
           )}
+          <div className="space-y-1.5">
+            <Label>Scanned Deed URL</Label>
+            <Input type="url" value={af.scanned_deed_url} onChange={(e) => setAf({ ...af, scanned_deed_url: e.target.value })} placeholder="https://…" />
+          </div>
         </div>
       </div>
 
@@ -759,13 +759,6 @@ export default function Applications() {
                     <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                       <Field label="Type" value={selected.application_type_display} />
                       {selected.description && <Field label="Description" value={selected.description} />}
-                      {selected.scanned_deed_url && (
-                        <div>
-                          <p className="text-xs text-muted-foreground">Scanned Deed</p>
-                          <a href={selected.scanned_deed_url} target="_blank" rel="noreferrer"
-                            className="text-sm text-primary underline">View</a>
-                        </div>
-                      )}
                     </div>
                     <Separator />
                     {/* Title info */}
@@ -773,6 +766,13 @@ export default function Applications() {
                       {selected.certificate_number && <Field label="Certificate Number" value={selected.certificate_number} />}
                       <Field label="Parcel" value={selected.parcel_number || selected.parcel_number_requested} />
                       <Field label="Ownership" value={selected.ownership_type_display} />
+                      {selected.scanned_deed_url && (
+                        <div>
+                          <p className="text-xs text-muted-foreground">Scanned Deed</p>
+                          <a href={selected.scanned_deed_url} target="_blank" rel="noreferrer"
+                            className="text-sm text-primary underline">View</a>
+                        </div>
+                      )}
                     </div>
                     <Separator />
                     {/* Dates */}

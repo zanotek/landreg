@@ -1,4 +1,5 @@
 from django.contrib.auth.models import User
+from django.db import transaction
 from rest_framework import serializers
 from .models import (
     Owner, UserProfile, LandParcel, Application,
@@ -224,10 +225,11 @@ class ApplicationStep1Serializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         proprietors_data = validated_data.pop('proprietors', [])
-        validated_data = self._handle_parcel(validated_data)
-        application = Application.objects.create(**validated_data)
-        for p in proprietors_data:
-            Proprietor.objects.create(application=application, **p)
+        with transaction.atomic():
+            validated_data = self._handle_parcel(validated_data)
+            application = Application.objects.create(**validated_data)
+            for p in proprietors_data:
+                Proprietor.objects.create(application=application, **p)
         return application
 
     def update(self, instance, validated_data):

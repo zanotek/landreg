@@ -1,6 +1,6 @@
-import datetime
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 
 class Owner(models.Model):
@@ -177,8 +177,14 @@ class Application(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.application_number:
-            year = datetime.datetime.now().year
-            count = Application.objects.filter(submitted_at__year=year).count() + 1
+            now = timezone.now()
+            year = now.year
+            year_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+            year_end = year_start.replace(year=year + 1)
+            count = Application.objects.filter(
+                submitted_at__gte=year_start,
+                submitted_at__lt=year_end,
+            ).count() + 1
             self.application_number = f"APP-{year}-{count:04d}"
         super().save(*args, **kwargs)
 

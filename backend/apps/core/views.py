@@ -201,6 +201,12 @@ class ApplicationViewSet(viewsets.ModelViewSet):
                 k: v for k, v in request.data.items()
                 if k not in ('returned_to_step', 'return_reason')
             }
+            # Empty string is invalid for DateField and violates the unique constraint
+            # on registration_number — coerce to None so the DB stores NULL instead.
+            if not review_data.get('registration_number'):
+                review_data['registration_number'] = None
+            if review_data.get('registration_entry_date') == '':
+                review_data['registration_entry_date'] = None
             review, _ = ApplicationReview.objects.get_or_create(application=app)
             serializer = ApplicationReviewWriteSerializer(review, data=review_data, partial=True)
             serializer.is_valid(raise_exception=True)

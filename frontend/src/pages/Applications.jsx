@@ -387,6 +387,7 @@ export default function Applications() {
       status: filterStatus !== 'all' ? filterStatus : undefined,
     })
       .then((r) => setData(r.data.results || r.data))
+      .catch(() => {})
       .finally(() => setLoading(false))
   }, [search, filterStatus])
 
@@ -439,7 +440,7 @@ export default function Applications() {
       setConfirmCreateOpen(false); setNewOpen(false); load()
     } catch (err) {
       const d = err.response?.data
-      setCreateError(typeof d === 'object' ? Object.values(d).flat().join(' ') : 'An error occurred.')
+      setCreateError(typeof d === 'object' ? JSON.stringify(d) : 'An error occurred.')
       setConfirmCreateOpen(false)
     } finally { setSaving(false) }
   }
@@ -524,18 +525,24 @@ export default function Applications() {
       setViewOpen(false); load()
     } catch (err) {
       const d = err.response?.data
-      setActionError(typeof d === 'object' ? Object.values(d).flat().join(' ') : 'Failed.')
+      setActionError(typeof d === 'object' ? JSON.stringify(d) : 'Failed.')
     } finally { setActing(false) }
   }
 
   const handleStep2Submit = async (returning = false) => {
     setActing(true); setActionError('')
     try {
-      await appsApi.submitStep2(selected.id, returning ? returnForm : step2Form)
+      const nullStr = (v) => v || null
+      const payload = returning ? returnForm : {
+        ...step2Form,
+        registration_number: nullStr(step2Form.registration_number),
+        registration_entry_date: nullStr(step2Form.registration_entry_date),
+      }
+      await appsApi.submitStep2(selected.id, payload)
       setViewOpen(false); load()
     } catch (err) {
       const d = err.response?.data
-      setActionError(typeof d === 'object' ? Object.values(d).flat().join(' ') : 'Failed.')
+      setActionError(typeof d === 'object' ? JSON.stringify(d) : 'Failed.')
     } finally { setActing(false) }
   }
 
@@ -546,7 +553,7 @@ export default function Applications() {
       setViewOpen(false); load()
     } catch (err) {
       const d = err.response?.data
-      setActionError(typeof d === 'object' ? Object.values(d).flat().join(' ') : 'Failed.')
+      setActionError(typeof d === 'object' ? JSON.stringify(d) : 'Failed.')
     } finally { setActing(false) }
   }
 

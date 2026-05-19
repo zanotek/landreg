@@ -408,7 +408,7 @@ export default function Applications() {
     setPrimaryProp(EMPTY_PROPRIETOR(true))
     setCoProps([])
     setCreateError('')
-    await loadParcels()
+    try { await loadParcels() } catch {}
     setNewOpen(true)
   }
 

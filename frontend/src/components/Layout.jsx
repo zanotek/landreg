@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils'
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/applications', label: 'Applications', icon: ClipboardList },
-  { to: '/owners', label: 'Owners', icon: Users },
+  { to: '/owners', label: 'Owners', icon: Users, hideForRoles: ['data_entry'] },
   { to: '/parcels', label: 'Parcels', icon: MapPin },
   { to: '/deeds', label: 'Title Deeds', icon: FileText },
 ]
@@ -43,7 +43,7 @@ export default function Layout({ children }) {
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-1">
-          {navItems.map(({ to, label, icon: Icon }) => {
+          {navItems.filter(({ hideForRoles }) => !hideForRoles?.includes(user?.profile?.role)).map(({ to, label, icon: Icon }) => {
             const active = location.pathname === to || (to !== '/' && location.pathname.startsWith(to))
             return (
               <Link

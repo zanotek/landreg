@@ -1,4 +1,5 @@
 from django.contrib.auth.models import User
+from django.db.models import Count
 from django.utils import timezone
 from rest_framework import viewsets, permissions, status, filters
 from rest_framework.decorators import action
@@ -92,7 +93,7 @@ class UserViewSet(viewsets.ModelViewSet):
 # ── Land Parcels ──────────────────────────────────────────────────────────────
 
 class OwnerViewSet(viewsets.ModelViewSet):
-    queryset = Owner.objects.all()
+    queryset = Owner.objects.annotate(deed_count=Count('deeds')).all()
     serializer_class = OwnerSerializer
     permission_classes = [IsAdminOrOfficer]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
@@ -241,9 +242,55 @@ class ApplicationViewSet(viewsets.ModelViewSet):
             app.save(update_fields=['status', 'updated_at'])
             if app.application_type == 'new_registration' and app.parcel_id:
                 LandParcel.objects.filter(pk=app.parcel_id).update(status='registered')
+                self._create_deed_from_application(app, request.user)
 
         app.refresh_from_db()
         return Response(ApplicationListSerializer(app, context={'request': request}).data)
+
+    @staticmethod
+    def _create_deed_from_application(app, user):
+        primary = app.proprietors.filter(is_primary=True).first()
+        if not primary:
+            return
+        name_parts = primary.full_name.strip().split(None, 1)
+        owner, _ = Owner.objects.get_or_create(
+            national_id=primary.national_id,
+            defaults={
+                'first_name': name_parts[0] if name_parts else '',
+                'last_name': name_parts[1] if len(name_parts) > 1 else '',
+                'phone': primary.phone or '',
+                'email': primary.email or '',
+                'address': primary.address or '',
+            },
+        )
+        review = getattr(app, 'review', None)
+        deed_number = (
+            review.registration_number
+            if review and review.registration_number
+            else f"DEED-{app.application_number}"
+        )
+        registration_date = (
+            review.registration_entry_date
+            if review and review.registration_entry_date
+            else timezone.now().date()
+        )
+        TitleDeed.objects.get_or_create(
+            deed_number=deed_number,
+            defaults={
+                'parcel': app.parcel,
+                'owner': owner,
+                'registered_by': user,
+                'ownership_type': app.ownership_type or '',
+                'certificate_number': app.certificate_number or '',
+                'registration_date': registration_date,
+                'first_registration_date': app.first_registration_date,
+                'issued_date': app.issued_date,
+                'received_from': app.received_from or '',
+                'received_date': app.received_date,
+                'received_by': app.received_by or '',
+                'expiry_date': app.expiry_date,
+            },
+        )
 
 
 # ── Title Deeds ───────────────────────────────────────────────────────────────

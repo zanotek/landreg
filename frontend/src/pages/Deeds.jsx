@@ -40,13 +40,16 @@ export default function Deeds() {
   const [form, setForm] = useState(EMPTY)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [loadError, setLoadError] = useState('')
   const [allParcels, setAllParcels] = useState([])
   const [allOwners, setAllOwners] = useState([])
 
   const load = useCallback(() => {
     setLoading(true)
+    setLoadError('')
     deedsApi.list({ search: search || undefined, status: filterStatus !== 'all' ? filterStatus : undefined })
       .then((r) => setData(r.data.results || r.data))
+      .catch(() => setLoadError('Failed to load deeds. Please refresh the page.'))
       .finally(() => setLoading(false))
   }, [search, filterStatus])
 
@@ -154,7 +157,9 @@ export default function Deeds() {
           <TableBody>
             {loading ? Array.from({ length: 5 }).map((_, i) => (
               <TableRow key={i}>{Array.from({ length: 8 }).map((_, j) => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}</TableRow>
-            )) : data.length === 0 ? (
+            )) : loadError ? (
+              <TableRow><TableCell colSpan={8} className="text-center text-destructive py-10">{loadError}</TableCell></TableRow>
+            ) : data.length === 0 ? (
               <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-10">No deeds found</TableCell></TableRow>
             ) : data.map((d) => (
               <TableRow key={d.id}>

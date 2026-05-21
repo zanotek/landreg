@@ -22,11 +22,14 @@ export default function Owners() {
   const [form, setForm] = useState(EMPTY)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [loadError, setLoadError] = useState('')
 
   const load = useCallback(() => {
     setLoading(true)
+    setLoadError('')
     ownersApi.list({ search: search || undefined })
       .then((r) => setData(r.data.results || r.data))
+      .catch(() => setLoadError('Failed to load owners. Please refresh the page.'))
       .finally(() => setLoading(false))
   }, [search])
 
@@ -91,7 +94,9 @@ export default function Owners() {
           <TableBody>
             {loading ? Array.from({ length: 5 }).map((_, i) => (
               <TableRow key={i}>{Array.from({ length: 7 }).map((_, j) => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}</TableRow>
-            )) : data.length === 0 ? (
+            )) : loadError ? (
+              <TableRow><TableCell colSpan={7} className="text-center text-destructive py-10">{loadError}</TableCell></TableRow>
+            ) : data.length === 0 ? (
               <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-10">No owners found</TableCell></TableRow>
             ) : data.map((o) => (
               <TableRow key={o.id}>

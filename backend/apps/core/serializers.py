@@ -251,12 +251,13 @@ class ApplicationStep1Serializer(serializers.ModelSerializer):
 
 class OwnerSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(read_only=True)
+    deed_count = serializers.IntegerField(read_only=True, default=0)
 
     class Meta:
         model = Owner
         fields = [
             'id', 'national_id', 'first_name', 'last_name', 'full_name',
-            'phone', 'email', 'address', 'created_at',
+            'phone', 'email', 'address', 'created_at', 'deed_count',
         ]
 
 

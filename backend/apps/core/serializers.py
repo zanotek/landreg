@@ -53,6 +53,31 @@ class UserCreateSerializer(serializers.ModelSerializer):
         return user
 
 
+class UserUpdateSerializer(serializers.ModelSerializer):
+    role = serializers.ChoiceField(choices=UserProfile.ROLE_CHOICES, required=False)
+    phone = serializers.CharField(required=False, allow_blank=True)
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'phone']
+        read_only_fields = ['id']
+
+    def update(self, instance, validated_data):
+        role = validated_data.pop('role', None)
+        phone = validated_data.pop('phone', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        if role is not None or phone is not None:
+            profile, _ = UserProfile.objects.get_or_create(user=instance)
+            if role is not None:
+                profile.role = role
+            if phone is not None:
+                profile.phone = phone
+            profile.save()
+        return instance
+
+
 # ── Land Parcel ───────────────────────────────────────────────────────────────
 
 class LandParcelSerializer(serializers.ModelSerializer):

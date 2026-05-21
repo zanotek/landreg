@@ -8,6 +8,7 @@ import Applications from '@/pages/Applications'
 import Owners from '@/pages/Owners'
 import Parcels from '@/pages/Parcels'
 import Deeds from '@/pages/Deeds'
+import Admin from '@/pages/Admin'
 
 class ErrorBoundary extends Component {
   state = { error: null }
@@ -47,6 +48,7 @@ export default function App() {
       <Route path="/owners" element={<ProtectedLayout><Owners /></ProtectedLayout>} />
       <Route path="/parcels" element={<ProtectedLayout><Parcels /></ProtectedLayout>} />
       <Route path="/deeds" element={<ProtectedLayout><Deeds /></ProtectedLayout>} />
+      <Route path="/admin" element={<ProtectedLayout><Admin /></ProtectedLayout>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

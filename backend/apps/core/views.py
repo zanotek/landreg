@@ -11,7 +11,7 @@ from .models import (
     ApplicationReview, ApplicationApproval, TitleDeed,
 )
 from .serializers import (
-    UserSerializer, UserCreateSerializer,
+    UserSerializer, UserCreateSerializer, UserUpdateSerializer,
     OwnerSerializer,
     LandParcelSerializer, LandParcelWriteSerializer,
     ApplicationListSerializer, ApplicationStep1Serializer,
@@ -80,14 +80,26 @@ class UserViewSet(viewsets.ModelViewSet):
     ordering = ['username']
 
     def get_permissions(self):
-        if self.action == 'create':
+        if self.action in ('create', 'update', 'partial_update', 'destroy', 'set_password'):
             return [IsAdmin()]
         return [IsAdminOrOfficer()]
 
     def get_serializer_class(self):
         if self.action == 'create':
             return UserCreateSerializer
+        if self.action in ('update', 'partial_update'):
+            return UserUpdateSerializer
         return UserSerializer
+
+    @action(detail=True, methods=['post'], url_path='set-password')
+    def set_password(self, request, pk=None):
+        user = self.get_object()
+        password = request.data.get('password', '')
+        if len(password) < 8:
+            return Response({'password': ['Must be at least 8 characters.']}, status=status.HTTP_400_BAD_REQUEST)
+        user.set_password(password)
+        user.save()
+        return Response({'detail': 'Password updated.'})
 
 
 # ── Land Parcels ──────────────────────────────────────────────────────────────

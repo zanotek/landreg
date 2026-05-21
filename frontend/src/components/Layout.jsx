@@ -3,7 +3,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import {
-  LayoutDashboard, ClipboardList, LogOut, Building2, Users, MapPin, FileText,
+  LayoutDashboard, ClipboardList, LogOut, Building2, Users, MapPin, FileText, ShieldCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -13,6 +13,7 @@ const navItems = [
   { to: '/owners', label: 'Owners', icon: Users, hideForRoles: ['data_entry'] },
   { to: '/parcels', label: 'Parcels', icon: MapPin },
   { to: '/deeds', label: 'Title Deeds', icon: FileText, hideForRoles: ['data_entry'] },
+  { to: '/admin', label: 'Admin Panel', icon: ShieldCheck, allowedRoles: ['admin'] },
 ]
 
 export default function Layout({ children }) {
@@ -43,7 +44,10 @@ export default function Layout({ children }) {
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-1">
-          {navItems.filter(({ hideForRoles }) => !hideForRoles?.includes(user?.profile?.role)).map(({ to, label, icon: Icon }) => {
+          {navItems.filter(({ hideForRoles, allowedRoles }) =>
+            !hideForRoles?.includes(user?.profile?.role) &&
+            (!allowedRoles || allowedRoles.includes(user?.profile?.role))
+          ).map(({ to, label, icon: Icon }) => {
             const active = location.pathname === to || (to !== '/' && location.pathname.startsWith(to))
             return (
               <Link

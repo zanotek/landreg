@@ -45,6 +45,15 @@ export default api
 
 // ── Convenience helpers ───────────────────────────────────────────────────────
 
+export const users = {
+  list: (params) => api.get('/users/', { params }),
+  get: (id) => api.get(`/users/${id}/`),
+  create: (data) => api.post('/users/', data),
+  update: (id, data) => api.patch(`/users/${id}/`, data),
+  delete: (id) => api.delete(`/users/${id}/`),
+  setPassword: (id, password) => api.post(`/users/${id}/set-password/`, { password }),
+}
+
 export const auth = {
   login: (username, password) =>
     axios.post(`${BASE_URL}/token/`, { username, password }),

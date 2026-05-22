@@ -275,6 +275,8 @@ class ApplicationViewSet(viewsets.ModelViewSet):
                 'address': primary.address or '',
             },
         )
+        if not app.parcel_id:
+            return
         review = getattr(app, 'review', None)
         deed_number = (
             review.registration_number

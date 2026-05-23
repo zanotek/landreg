@@ -184,6 +184,7 @@ class ApplicationViewSet(viewsets.ModelViewSet):
             step1_by=self.request.user,
             step1_at=timezone.now(),
         )
+        self._upsert_owner_from_application(serializer.instance)
 
     @action(detail=True, methods=['patch'], url_path='submit-step1')
     def submit_step1(self, request, pk=None):
@@ -196,6 +197,7 @@ class ApplicationViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save(status='step2', step1_by=request.user, step1_at=timezone.now())
         app.refresh_from_db()
+        self._upsert_owner_from_application(app)
         return Response(ApplicationListSerializer(app, context={'request': request}).data)
 
     @action(detail=True, methods=['patch'], url_path='submit-step2')
@@ -260,12 +262,33 @@ class ApplicationViewSet(viewsets.ModelViewSet):
         return Response(ApplicationListSerializer(app, context={'request': request}).data)
 
     @staticmethod
+    def _upsert_owner_from_application(app):
+        """Create or update an Owner from the primary proprietor as soon as an
+        application is submitted, so owners are visible before approval."""
+        if app.application_type != 'new_registration':
+            return
+        primary = app.proprietors.filter(is_primary=True).first()
+        if not primary or not primary.national_id:
+            return
+        name_parts = primary.full_name.strip().split(None, 1)
+        Owner.objects.update_or_create(
+            national_id=primary.national_id,
+            defaults={
+                'first_name': name_parts[0] if name_parts else '',
+                'last_name': name_parts[1] if len(name_parts) > 1 else '',
+                'phone': primary.phone or '',
+                'email': primary.email or '',
+                'address': primary.address or '',
+            },
+        )
+
+    @staticmethod
     def _create_deed_from_application(app, user):
         primary = app.proprietors.filter(is_primary=True).first()
         if not primary:
             return
         name_parts = primary.full_name.strip().split(None, 1)
-        owner, _ = Owner.objects.get_or_create(
+        owner, _ = Owner.objects.update_or_create(
             national_id=primary.national_id,
             defaults={
                 'first_name': name_parts[0] if name_parts else '',

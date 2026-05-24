@@ -43,6 +43,15 @@ export default function Deeds() {
   const [loadError, setLoadError] = useState('')
   const [allParcels, setAllParcels] = useState([])
   const [allOwners, setAllOwners] = useState([])
+  const [printingDeed, setPrintingDeed] = useState(null)
+
+  useEffect(() => {
+    if (!printingDeed) return
+    window.print()
+    const handler = () => setPrintingDeed(null)
+    window.addEventListener('afterprint', handler, { once: true })
+    return () => window.removeEventListener('afterprint', handler)
+  }, [printingDeed])
 
   const load = useCallback(() => {
     setLoading(true)
@@ -183,8 +192,9 @@ export default function Deeds() {
                 <TableCell className="text-sm">{formatDate(d.registration_date)}</TableCell>
                 <TableCell><Badge variant={STATUS_BADGE[d.status] || 'outline'}>{d.status_display}</Badge></TableCell>
                 <TableCell className="text-muted-foreground text-sm">{d.registered_by_name || '—'}</TableCell>
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="icon" onClick={() => openEdit(d)}><Pencil className="h-4 w-4" /></Button>
+                <TableCell className="text-right space-x-1">
+                  <Button variant="ghost" size="icon" title="Print" onClick={() => setPrintingDeed(d)}><Printer className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" title="Edit" onClick={() => openEdit(d)}><Pencil className="h-4 w-4" /></Button>
                 </TableCell>
               </TableRow>
             ))}
@@ -194,71 +204,173 @@ export default function Deeds() {
 
       {/* ── Print-only layout ── */}
       <div className="hidden print:block text-black text-[10pt]">
-        {/* Official header */}
-        <div className="text-center mb-4 border-b-2 border-black pb-3">
-          <p className="text-[8pt] font-medium tracking-widest uppercase">The Revolutionary Government of Zanzibar</p>
-          <p className="text-[8pt] tracking-wide uppercase">Ministry of Lands, Housing and Urban Development</p>
-          <h1 className="text-[16pt] font-bold uppercase tracking-wide mt-1">Land Title Register</h1>
-          <div className="flex justify-between text-[8pt] mt-2 text-gray-600">
-            <span>Date Printed: {printDate}</span>
-            <span>Total Records: {data.length}</span>
-            {filterStatus !== 'all' && <span>Filter: {STATUSES.find(([v]) => v === filterStatus)?.[1]}</span>}
-          </div>
-        </div>
 
-        {/* Full register table */}
-        <table className="w-full border-collapse text-[8pt]">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="border border-gray-400 px-1 py-1 text-left font-bold">#</th>
-              <th className="border border-gray-400 px-1 py-1 text-left font-bold">CRO</th>
-              <th className="border border-gray-400 px-1 py-1 text-left font-bold">Cert. No.</th>
-              <th className="border border-gray-400 px-1 py-1 text-left font-bold">Parcel</th>
-              <th className="border border-gray-400 px-1 py-1 text-left font-bold">Owner</th>
-              <th className="border border-gray-400 px-1 py-1 text-left font-bold">Identification</th>
-              <th className="border border-gray-400 px-1 py-1 text-left font-bold">Ownership</th>
-              <th className="border border-gray-400 px-1 py-1 text-left font-bold">Reg. Date</th>
-              <th className="border border-gray-400 px-1 py-1 text-left font-bold">1st Reg.</th>
-              <th className="border border-gray-400 px-1 py-1 text-left font-bold">Issued</th>
-              <th className="border border-gray-400 px-1 py-1 text-left font-bold">Expiry</th>
-              <th className="border border-gray-400 px-1 py-1 text-left font-bold">Rcvd. From</th>
-              <th className="border border-gray-400 px-1 py-1 text-left font-bold">Rcvd. Date</th>
-              <th className="border border-gray-400 px-1 py-1 text-left font-bold">Status</th>
-              <th className="border border-gray-400 px-1 py-1 text-left font-bold">Reg. By</th>
-              <th className="border border-gray-400 px-1 py-1 text-left font-bold">Notes</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.length === 0 ? (
-              <tr><td colSpan={16} className="border border-gray-400 px-2 py-3 text-center text-gray-500">No records</td></tr>
-            ) : data.map((d, i) => (
-              <tr key={d.id} className={i % 2 === 0 ? '' : 'bg-gray-50'}>
-                <td className="border border-gray-300 px-1 py-0.5 text-gray-500">{i + 1}</td>
-                <td className="border border-gray-300 px-1 py-0.5 font-medium">{d.deed_number}</td>
-                <td className="border border-gray-300 px-1 py-0.5">{d.certificate_number || '—'}</td>
-                <td className="border border-gray-300 px-1 py-0.5">{d.parcel_number}</td>
-                <td className="border border-gray-300 px-1 py-0.5 font-medium">{d.owner_name}</td>
-                <td className="border border-gray-300 px-1 py-0.5">{d.owner_national_id}</td>
-                <td className="border border-gray-300 px-1 py-0.5">{d.ownership_type_display || '—'}</td>
-                <td className="border border-gray-300 px-1 py-0.5">{formatDate(d.registration_date)}</td>
-                <td className="border border-gray-300 px-1 py-0.5">{formatDate(d.first_registration_date) || '—'}</td>
-                <td className="border border-gray-300 px-1 py-0.5">{formatDate(d.issued_date) || '—'}</td>
-                <td className="border border-gray-300 px-1 py-0.5">{formatDate(d.expiry_date) || '—'}</td>
-                <td className="border border-gray-300 px-1 py-0.5">{d.received_from || '—'}</td>
-                <td className="border border-gray-300 px-1 py-0.5">{formatDate(d.received_date) || '—'}</td>
-                <td className="border border-gray-300 px-1 py-0.5">{d.status_display}</td>
-                <td className="border border-gray-300 px-1 py-0.5">{d.registered_by_name || '—'}</td>
-                <td className="border border-gray-300 px-1 py-0.5">{d.notes || '—'}</td>
-              </tr>
+        {/* ── Individual deed certificate ── */}
+        {printingDeed ? (
+          <div className="max-w-[700px] mx-auto">
+            {/* Header */}
+            <div className="text-center border-b-2 border-black pb-3 mb-5">
+              <p className="text-[8pt] font-medium tracking-widest uppercase">The Revolutionary Government of Zanzibar</p>
+              <p className="text-[8pt] tracking-wide uppercase">Ministry of Lands, Housing and Urban Development</p>
+              <h1 className="text-[18pt] font-bold uppercase tracking-wide mt-1">Certificate of Title</h1>
+              <p className="text-[8pt] text-gray-600 mt-1">Land Title Registration System</p>
+            </div>
+
+            {/* CRO + Certificate row */}
+            <div className="flex justify-between mb-4 text-[9pt]">
+              <div><span className="font-bold">CRO No.:</span> <span className="font-mono">{printingDeed.deed_number}</span></div>
+              {printingDeed.certificate_number && (
+                <div><span className="font-bold">Certificate No.:</span> <span className="font-mono">{printingDeed.certificate_number}</span></div>
+              )}
+              <div><span className="font-bold">Status:</span> {printingDeed.status_display}</div>
+            </div>
+
+            {/* Sections */}
+            {[
+              {
+                title: 'Property Details',
+                rows: [
+                  ['Parcel Number', printingDeed.parcel_number],
+                ],
+              },
+              {
+                title: 'Ownership Details',
+                rows: [
+                  ['Full Name', printingDeed.owner_name],
+                  ['Identification No.', printingDeed.owner_national_id],
+                  ['Ownership Type', printingDeed.ownership_type_display || '—'],
+                ],
+              },
+              {
+                title: 'Registration Details',
+                rows: [
+                  ['Registration Date', formatDate(printingDeed.registration_date)],
+                  ['First Registration Date', formatDate(printingDeed.first_registration_date) || '—'],
+                  ['Issued Date', formatDate(printingDeed.issued_date) || '—'],
+                  ['Expiry Date', formatDate(printingDeed.expiry_date) || '—'],
+                ],
+              },
+              {
+                title: 'Receipt Information',
+                rows: [
+                  ['Received From', printingDeed.received_from || '—'],
+                  ['Received Date', formatDate(printingDeed.received_date) || '—'],
+                  ['Received By', printingDeed.received_by || '—'],
+                ],
+              },
+            ].map(({ title, rows }) => (
+              <div key={title} className="mb-4">
+                <h2 className="text-[9pt] font-bold uppercase tracking-wide border-b border-black mb-1 pb-0.5">{title}</h2>
+                <table className="w-full text-[9pt]">
+                  <tbody>
+                    {rows.map(([label, value]) => (
+                      <tr key={label}>
+                        <td className="py-0.5 pr-4 text-gray-600 w-48">{label}</td>
+                        <td className="py-0.5 font-medium">{value}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             ))}
-          </tbody>
-        </table>
 
-        {/* Footer */}
-        <div className="mt-6 flex justify-between text-[8pt] text-gray-500 border-t border-gray-300 pt-2">
-          <span>LandReg — Zanzibar Land Title Registration System</span>
-          <span>Printed on {printDate} · {data.length} record{data.length !== 1 ? 's' : ''}</span>
-        </div>
+            {/* Notes */}
+            {printingDeed.notes && (
+              <div className="mb-4">
+                <h2 className="text-[9pt] font-bold uppercase tracking-wide border-b border-black mb-1 pb-0.5">Notes</h2>
+                <p className="text-[9pt] mt-1">{printingDeed.notes}</p>
+              </div>
+            )}
+
+            {/* Signature block */}
+            <div className="mt-10 grid grid-cols-2 gap-12 text-[9pt]">
+              <div>
+                <div className="border-t border-black pt-1">
+                  <p className="font-medium">Registered By</p>
+                  <p className="text-gray-600">{printingDeed.registered_by_name || '—'}</p>
+                </div>
+              </div>
+              <div>
+                <div className="border-t border-black pt-1">
+                  <p className="font-medium">Authorised Signatory</p>
+                  <p className="text-gray-600">Registrar of Lands</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="mt-8 text-center text-[7pt] text-gray-400 border-t border-gray-300 pt-2">
+              LandReg — Zanzibar Land Title Registration System · Printed on {printDate}
+            </div>
+          </div>
+
+        ) : (
+          /* ── Full register table ── */
+          <>
+            <div className="text-center mb-4 border-b-2 border-black pb-3">
+              <p className="text-[8pt] font-medium tracking-widest uppercase">The Revolutionary Government of Zanzibar</p>
+              <p className="text-[8pt] tracking-wide uppercase">Ministry of Lands, Housing and Urban Development</p>
+              <h1 className="text-[16pt] font-bold uppercase tracking-wide mt-1">Land Title Register</h1>
+              <div className="flex justify-between text-[8pt] mt-2 text-gray-600">
+                <span>Date Printed: {printDate}</span>
+                <span>Total Records: {data.length}</span>
+                {filterStatus !== 'all' && <span>Filter: {STATUSES.find(([v]) => v === filterStatus)?.[1]}</span>}
+              </div>
+            </div>
+
+            <table className="w-full border-collapse text-[8pt]">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">#</th>
+                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">CRO</th>
+                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Cert. No.</th>
+                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Parcel</th>
+                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Owner</th>
+                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Identification</th>
+                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Ownership</th>
+                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Reg. Date</th>
+                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">1st Reg.</th>
+                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Issued</th>
+                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Expiry</th>
+                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Rcvd. From</th>
+                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Rcvd. Date</th>
+                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Status</th>
+                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Reg. By</th>
+                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.length === 0 ? (
+                  <tr><td colSpan={16} className="border border-gray-400 px-2 py-3 text-center text-gray-500">No records</td></tr>
+                ) : data.map((d, i) => (
+                  <tr key={d.id} className={i % 2 === 0 ? '' : 'bg-gray-50'}>
+                    <td className="border border-gray-300 px-1 py-0.5 text-gray-500">{i + 1}</td>
+                    <td className="border border-gray-300 px-1 py-0.5 font-medium">{d.deed_number}</td>
+                    <td className="border border-gray-300 px-1 py-0.5">{d.certificate_number || '—'}</td>
+                    <td className="border border-gray-300 px-1 py-0.5">{d.parcel_number}</td>
+                    <td className="border border-gray-300 px-1 py-0.5 font-medium">{d.owner_name}</td>
+                    <td className="border border-gray-300 px-1 py-0.5">{d.owner_national_id}</td>
+                    <td className="border border-gray-300 px-1 py-0.5">{d.ownership_type_display || '—'}</td>
+                    <td className="border border-gray-300 px-1 py-0.5">{formatDate(d.registration_date)}</td>
+                    <td className="border border-gray-300 px-1 py-0.5">{formatDate(d.first_registration_date) || '—'}</td>
+                    <td className="border border-gray-300 px-1 py-0.5">{formatDate(d.issued_date) || '—'}</td>
+                    <td className="border border-gray-300 px-1 py-0.5">{formatDate(d.expiry_date) || '—'}</td>
+                    <td className="border border-gray-300 px-1 py-0.5">{d.received_from || '—'}</td>
+                    <td className="border border-gray-300 px-1 py-0.5">{formatDate(d.received_date) || '—'}</td>
+                    <td className="border border-gray-300 px-1 py-0.5">{d.status_display}</td>
+                    <td className="border border-gray-300 px-1 py-0.5">{d.registered_by_name || '—'}</td>
+                    <td className="border border-gray-300 px-1 py-0.5">{d.notes || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="mt-6 flex justify-between text-[8pt] text-gray-500 border-t border-gray-300 pt-2">
+              <span>LandReg — Zanzibar Land Title Registration System</span>
+              <span>Printed on {printDate} · {data.length} record{data.length !== 1 ? 's' : ''}</span>
+            </div>
+          </>
+        )}
       </div>
 
       {/* ── Create / Edit dialog ── */}

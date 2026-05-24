@@ -29,7 +29,7 @@ export default function Layout({ children }) {
   return (
     <div className="flex h-screen bg-background">
       {/* Sidebar */}
-      <aside className="w-64 flex flex-col border-r bg-card shrink-0">
+      <aside className="w-64 flex flex-col border-r bg-card shrink-0 print:hidden">
         {/* Logo */}
         <div className="flex items-center gap-3 px-6 py-5">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">

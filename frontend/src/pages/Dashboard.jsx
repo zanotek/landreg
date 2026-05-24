@@ -12,7 +12,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 
 const STATUS_BADGE = {
   step1: { label: 'Step 1 – Records Module', variant: 'warning' },
-  step2: { label: 'Step 2 – Registration Module', variant: 'info' },
+  step2: { label: 'Step 2 – Registration Officer', variant: 'info' },
   step3: { label: 'Step 3 – Pending Approval', variant: 'secondary' },
   returned: { label: 'Returned', variant: 'destructive' },
   approved: { label: 'Approved', variant: 'success' },

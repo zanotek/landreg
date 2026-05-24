@@ -11,7 +11,7 @@ APPLICATION_TYPES = [
 
 APPLICATION_STATUSES = [
     (0, 'step1', 'Step 1 – Records Module'),
-    (1, 'step2', 'Step 2 – Registration Module'),
+    (1, 'step2', 'Step 2 – Registration Officer'),
     (2, 'step3', 'Step 3 – Pending Approval'),
     (3, 'returned', 'Returned for Correction'),
     (4, 'approved', 'Approved'),

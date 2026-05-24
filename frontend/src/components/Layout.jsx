@@ -7,6 +7,13 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+const ROLE_LABELS = {
+  admin: 'Administrator',
+  data_entry: 'Records Module',
+  reviewing_officer: 'Registration Officer',
+  registrar: 'Registrar',
+}
+
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/applications', label: 'Applications', icon: ClipboardList },
@@ -76,7 +83,7 @@ export default function Layout({ children }) {
             </div>
             <div className="min-w-0">
               <p className="text-sm font-medium truncate">{user?.full_name || user?.username}</p>
-              <p className="text-xs text-muted-foreground capitalize">{user?.profile?.role}</p>
+              <p className="text-xs text-muted-foreground">{ROLE_LABELS[user?.profile?.role] || user?.profile?.role}</p>
             </div>
           </div>
           <Button variant="outline" size="sm" className="w-full justify-start gap-2" onClick={handleLogout}>

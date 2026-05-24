@@ -64,7 +64,7 @@ const REGIONS = [
 ]
 const STATUSES = [
   ['step1', 'Step 1 – Records Module'],
-  ['step2', 'Step 2 – Registration Module'],
+  ['step2', 'Step 2 – Registration Officer'],
   ['step3', 'Step 3 – Pending Approval'],
   ['returned', 'Returned for Correction'],
   ['approved', 'Approved'],
@@ -674,7 +674,7 @@ export default function Applications() {
               <div className="space-y-3 my-2">
                 <p className="text-sm text-muted-foreground">
                   Please verify the details below are correct. Once confirmed, this application will
-                  be sent directly to the Registration Module.
+                  be sent directly to the Registration Officer.
                 </p>
                 <div className="rounded-md border p-3 space-y-2 text-sm">
                   <div className="flex justify-between">
@@ -932,7 +932,7 @@ export default function Applications() {
                   <Button onClick={() => setConfirmStep1Open(true)} disabled={acting}>
                     {acting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     <CheckCircle2 className="mr-2 h-4 w-4" />
-                    Submit to Registration Module
+                    Submit to Registration Officer
                   </Button>
                 </div>
               )}
@@ -944,7 +944,7 @@ export default function Applications() {
                   <div className="space-y-3 my-2">
                     <p className="text-sm text-muted-foreground">
                       Please verify the details below are correct. Once confirmed, this application
-                      will be sent to the Registration Module.
+                      will be sent to the Registration Officer.
                     </p>
                     <div className="rounded-md border p-3 space-y-2 text-sm">
                       <div className="flex justify-between">
@@ -1022,7 +1022,7 @@ export default function Applications() {
                       <SelectTrigger><SelectValue placeholder="Select step" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="1">Step 1 — Records Module</SelectItem>
-                        {actingStep === 3 && <SelectItem value="2">Step 2 — Registration Module</SelectItem>}
+                        {actingStep === 3 && <SelectItem value="2">Step 2 — Registration Officer</SelectItem>}
                       </SelectContent>
                     </Select>
                   </div>

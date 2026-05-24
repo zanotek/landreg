@@ -34,7 +34,7 @@ const TABS = [
   { id: 'users', label: 'Users' },
   { id: 'owners', label: 'Owners' },
   { id: 'parcels', label: 'Parcels' },
-  { id: 'deeds', label: 'Title Deeds' },
+  { id: 'deeds', label: 'Register' },
 ]
 
 const EMPTY_FORM = { username: '', first_name: '', last_name: '', email: '', password: '', role: 'data_entry', phone: '' }

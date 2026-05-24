@@ -117,7 +117,7 @@ export default function Deeds() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Title Deeds</h1>
+          <h1 className="text-2xl font-bold">Register</h1>
           <p className="text-muted-foreground mt-1">Register and manage land title deeds</p>
         </div>
         <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Register Deed</Button>
@@ -144,10 +144,10 @@ export default function Deeds() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Deed #</TableHead>
+              <TableHead>CRO</TableHead>
               <TableHead>Parcel</TableHead>
               <TableHead>Owner</TableHead>
-              <TableHead>National ID</TableHead>
+              <TableHead>Identification</TableHead>
               <TableHead>Reg. Date</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Registered By</TableHead>

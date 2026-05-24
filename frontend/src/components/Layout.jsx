@@ -12,7 +12,7 @@ const navItems = [
   { to: '/applications', label: 'Applications', icon: ClipboardList },
   { to: '/owners', label: 'Owners', icon: Users, hideForRoles: ['data_entry'] },
   { to: '/parcels', label: 'Parcels', icon: MapPin },
-  { to: '/deeds', label: 'Title Deeds', icon: FileText, hideForRoles: ['data_entry'] },
+  { to: '/deeds', label: 'Register', icon: FileText, hideForRoles: ['data_entry'] },
   { to: '/admin', label: 'Admin Panel', icon: ShieldCheck, allowedRoles: ['admin'] },
 ]
 

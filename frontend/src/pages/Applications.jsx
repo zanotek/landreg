@@ -63,7 +63,7 @@ const REGIONS = [
   ['kusini_pemba', 'Kusini Pemba'],
 ]
 const STATUSES = [
-  ['step1', 'Step 1 – Data Entry'],
+  ['step1', 'Step 1 – Records Module'],
   ['step2', 'Step 2 – Registration Module'],
   ['step3', 'Step 3 – Pending Approval'],
   ['returned', 'Returned for Correction'],
@@ -747,7 +747,7 @@ export default function Applications() {
 
               {/* ── Step 1 ─────────────────────────────────────────────────── */}
               <div className="rounded-lg border p-4">
-                <StepHeading step={1} title="Data Entry"
+                <StepHeading step={1} title="Records Info"
                   completed={selected.step1_at} name={selected.step1_by_name} />
 
                 {actingStep === 1 ? (
@@ -1021,7 +1021,7 @@ export default function Applications() {
                       onValueChange={(v) => setReturnForm({ ...returnForm, returned_to_step: v })}>
                       <SelectTrigger><SelectValue placeholder="Select step" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="1">Step 1 — Data Entry</SelectItem>
+                        <SelectItem value="1">Step 1 — Records Module</SelectItem>
                         {actingStep === 3 && <SelectItem value="2">Step 2 — Registration Module</SelectItem>}
                       </SelectContent>
                     </Select>

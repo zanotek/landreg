@@ -88,6 +88,20 @@ export const deeds = {
   delete: (id) => api.delete(`/deeds/${id}/`),
 }
 
+export const appTypes = {
+  list: (params) => api.get('/application-types/', { params }),
+  create: (data) => api.post('/application-types/', data),
+  update: (id, data) => api.patch(`/application-types/${id}/`, data),
+  delete: (id) => api.delete(`/application-types/${id}/`),
+}
+
+export const appStatuses = {
+  list: (params) => api.get('/application-statuses/', { params }),
+  create: (data) => api.post('/application-statuses/', data),
+  update: (id, data) => api.patch(`/application-statuses/${id}/`, data),
+  delete: (id) => api.delete(`/application-statuses/${id}/`),
+}
+
 export const applications = {
   list: (params) => api.get('/applications/', { params }),
   get: (id) => api.get(`/applications/${id}/`),

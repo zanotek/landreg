@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { users as usersApi } from '@/lib/api'
+import { users as usersApi, appTypes as appTypesApi, appStatuses as appStatusesApi } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -18,7 +18,7 @@ import Deeds from './Deeds'
 
 const ROLES = [
   ['admin', 'Administrator'],
-  ['data_entry', 'Data Entry Officer'],
+  ['data_entry', 'Records Module'],
   ['reviewing_officer', 'Registration Module'],
   ['registrar', 'Registrar'],
 ]
@@ -35,6 +35,8 @@ const TABS = [
   { id: 'owners', label: 'Owners' },
   { id: 'parcels', label: 'Parcels' },
   { id: 'deeds', label: 'Register' },
+  { id: 'app-types', label: 'Application Types' },
+  { id: 'app-statuses', label: 'Application Statuses' },
 ]
 
 const EMPTY_FORM = { username: '', first_name: '', last_name: '', email: '', password: '', role: 'data_entry', phone: '' }
@@ -250,6 +252,142 @@ function UsersTab() {
   )
 }
 
+function ReferenceTab({ api: refApi, noun, columns }) {
+  const [data, setData] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [open, setOpen] = useState(false)
+  const [editing, setEditing] = useState(null)
+  const [form, setForm] = useState({ code: '', label: '', display_order: 0, is_active: true })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const load = useCallback(() => {
+    setLoading(true); setLoadError('')
+    refApi.list().then((r) => setData(r.data.results || r.data))
+      .catch(() => setLoadError('Failed to load. Please refresh.'))
+      .finally(() => setLoading(false))
+  }, [refApi])
+
+  useEffect(() => { load() }, [load])
+
+  const openCreate = () => {
+    setEditing(null); setForm({ code: '', label: '', display_order: 0, is_active: true }); setError(''); setOpen(true)
+  }
+  const openEdit = (row) => {
+    setEditing(row); setForm({ code: row.code, label: row.label, display_order: row.display_order, is_active: row.is_active }); setError(''); setOpen(true)
+  }
+  const handleDelete = async (row) => {
+    if (!window.confirm(`Delete "${row.label}"? This cannot be undone.`)) return
+    await refApi.delete(row.id); load()
+  }
+  const handleSave = async (e) => {
+    e.preventDefault(); setSaving(true); setError('')
+    try {
+      editing ? await refApi.update(editing.id, form) : await refApi.create(form)
+      setOpen(false); load()
+    } catch (err) {
+      const d = err.response?.data
+      setError(typeof d === 'object' ? Object.values(d).flat().join(' ') : 'An error occurred.')
+    } finally { setSaving(false) }
+  }
+  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">Manage {noun.toLowerCase()} codes and labels</p>
+        <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Add {noun}</Button>
+      </div>
+      <Card>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Code</TableHead>
+              <TableHead>Label</TableHead>
+              <TableHead className="text-center">Order</TableHead>
+              <TableHead className="text-center">Active</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? Array.from({ length: 4 }).map((_, i) => (
+              <TableRow key={i}>{Array.from({ length: 5 }).map((_, j) => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}</TableRow>
+            )) : loadError ? (
+              <TableRow><TableCell colSpan={5} className="text-center text-destructive py-10">{loadError}</TableCell></TableRow>
+            ) : data.length === 0 ? (
+              <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-10">No {noun.toLowerCase()}s found</TableCell></TableRow>
+            ) : data.map((row) => (
+              <TableRow key={row.id}>
+                <TableCell className="font-mono text-sm">{row.code}</TableCell>
+                <TableCell className="font-medium">{row.label}</TableCell>
+                <TableCell className="text-center text-muted-foreground">{row.display_order}</TableCell>
+                <TableCell className="text-center">
+                  <Badge variant={row.is_active ? 'success' : 'secondary'}>{row.is_active ? 'Yes' : 'No'}</Badge>
+                </TableCell>
+                <TableCell className="text-right space-x-1">
+                  <Button variant="ghost" size="icon" title="Edit" onClick={() => openEdit(row)}><Pencil className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" title="Delete" onClick={() => handleDelete(row)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </Card>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editing ? `Edit ${noun}` : `Add ${noun}`}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSave} className="space-y-4 mt-2">
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            <div className="space-y-1.5">
+              <Label>Code *</Label>
+              <Input required value={form.code} onChange={set('code')} placeholder="e.g. new_registration" disabled={!!editing} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Label *</Label>
+              <Input required value={form.label} onChange={set('label')} placeholder="Display name" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Display Order</Label>
+                <Input type="number" min={0} value={form.display_order} onChange={set('display_order')} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Active</Label>
+                <Select value={String(form.is_active)} onValueChange={(v) => setForm({ ...form, is_active: v === 'true' })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="true">Yes</SelectItem>
+                    <SelectItem value="false">No</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={saving}>
+                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {editing ? 'Save Changes' : `Add ${noun}`}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
+
+function AppTypesTab() {
+  return <ReferenceTab api={appTypesApi} noun="Application Type" />
+}
+
+function AppStatusesTab() {
+  return <ReferenceTab api={appStatusesApi} noun="Application Status" />
+}
+
 export default function Admin() {
   const [tab, setTab] = useState('users')
 
@@ -281,6 +419,8 @@ export default function Admin() {
       {tab === 'owners' && <Owners />}
       {tab === 'parcels' && <Parcels />}
       {tab === 'deeds' && <Deeds />}
+      {tab === 'app-types' && <AppTypesTab />}
+      {tab === 'app-statuses' && <AppStatusesTab />}
     </div>
   )
 }

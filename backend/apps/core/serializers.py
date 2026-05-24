@@ -4,6 +4,7 @@ from rest_framework import serializers
 from .models import (
     Owner, UserProfile, LandParcel, Application,
     Proprietor, ApplicationReview, ApplicationApproval, TitleDeed,
+    ApplicationType, ApplicationStatus,
 )
 
 
@@ -329,3 +330,17 @@ class TitleDeedWriteSerializer(serializers.ModelSerializer):
             'expiry_date', 'status', 'notes',
         ]
         read_only_fields = ['id']
+
+
+# ── ApplicationType & ApplicationStatus ───────────────────────────────────────
+
+class ApplicationTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ApplicationType
+        fields = ['id', 'code', 'label', 'is_active', 'display_order']
+
+
+class ApplicationStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ApplicationStatus
+        fields = ['id', 'code', 'label', 'is_active', 'display_order']

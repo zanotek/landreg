@@ -295,3 +295,29 @@ class TitleDeed(models.Model):
 
     def __str__(self):
         return f"Deed {self.deed_number}"
+
+
+class ApplicationType(models.Model):
+    code = models.CharField(max_length=50, unique=True)
+    label = models.CharField(max_length=100)
+    is_active = models.BooleanField(default=True)
+    display_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['display_order', 'label']
+
+    def __str__(self):
+        return self.label
+
+
+class ApplicationStatus(models.Model):
+    code = models.CharField(max_length=50, unique=True)
+    label = models.CharField(max_length=100)
+    is_active = models.BooleanField(default=True)
+    display_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['display_order', 'label']
+
+    def __str__(self):
+        return self.label

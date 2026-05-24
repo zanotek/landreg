@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 from .models import (
     Owner, LandParcel, Application,
     ApplicationReview, ApplicationApproval, TitleDeed,
+    ApplicationType, ApplicationStatus,
 )
 from .serializers import (
     UserSerializer, UserCreateSerializer, UserUpdateSerializer,
@@ -17,6 +18,7 @@ from .serializers import (
     ApplicationListSerializer, ApplicationStep1Serializer,
     ApplicationReviewWriteSerializer, ApplicationApprovalWriteSerializer,
     TitleDeedSerializer, TitleDeedWriteSerializer,
+    ApplicationTypeSerializer, ApplicationStatusSerializer,
 )
 
 
@@ -357,3 +359,23 @@ class TitleDeedViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(registered_by=self.request.user)
+
+
+# ── Application Types & Statuses ──────────────────────────────────────────────
+
+class ApplicationTypeViewSet(viewsets.ModelViewSet):
+    queryset = ApplicationType.objects.all()
+    serializer_class = ApplicationTypeSerializer
+    permission_classes = [IsAdmin]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['code', 'label']
+    ordering = ['display_order', 'label']
+
+
+class ApplicationStatusViewSet(viewsets.ModelViewSet):
+    queryset = ApplicationStatus.objects.all()
+    serializer_class = ApplicationStatusSerializer
+    permission_classes = [IsAdmin]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['code', 'label']
+    ordering = ['display_order', 'label']

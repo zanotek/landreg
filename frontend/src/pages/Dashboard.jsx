@@ -11,7 +11,7 @@ import { ClipboardList, CheckCircle2, RotateCcw } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 
 const STATUS_BADGE = {
-  step1: { label: 'Step 1 – Data Entry', variant: 'warning' },
+  step1: { label: 'Step 1 – Records Module', variant: 'warning' },
   step2: { label: 'Step 2 – Registration Module', variant: 'info' },
   step3: { label: 'Step 3 – Pending Approval', variant: 'secondary' },
   returned: { label: 'Returned', variant: 'destructive' },

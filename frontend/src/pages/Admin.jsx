@@ -19,7 +19,7 @@ import Deeds from './Deeds'
 const ROLES = [
   ['admin', 'Administrator'],
   ['data_entry', 'Data Entry Officer'],
-  ['reviewing_officer', 'Reviewing Officer'],
+  ['reviewing_officer', 'Registration Module'],
   ['registrar', 'Registrar'],
 ]
 

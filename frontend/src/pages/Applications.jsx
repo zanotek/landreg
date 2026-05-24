@@ -64,7 +64,7 @@ const REGIONS = [
 ]
 const STATUSES = [
   ['step1', 'Step 1 – Data Entry'],
-  ['step2', 'Step 2 – Under Review'],
+  ['step2', 'Step 2 – Registration Module'],
   ['step3', 'Step 3 – Pending Approval'],
   ['returned', 'Returned for Correction'],
   ['approved', 'Approved'],
@@ -662,7 +662,7 @@ export default function Applications() {
               <Button type="submit" disabled={saving}>
                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 <CheckCircle2 className="mr-2 h-4 w-4" />
-                Submit for Review
+                Submit for Registration
               </Button>
             </div>
           </form>
@@ -674,7 +674,7 @@ export default function Applications() {
               <div className="space-y-3 my-2">
                 <p className="text-sm text-muted-foreground">
                   Please verify the details below are correct. Once confirmed, this application will
-                  be sent directly to the Reviewing Officer.
+                  be sent directly to the Registration Module.
                 </p>
                 <div className="rounded-md border p-3 space-y-2 text-sm">
                   <div className="flex justify-between">
@@ -832,7 +832,7 @@ export default function Applications() {
               {/* ── Step 2 ─────────────────────────────────────────────────── */}
               {(['step2', 'step3', 'returned', 'approved', 'rejected'].includes(selected.status) || actingStep === 2) && (
                 <div className="rounded-lg border p-4">
-                  <StepHeading step={2} title="Review"
+                  <StepHeading step={2} title="Registration Info"
                     completed={selected.review?.reviewed_at}
                     name={selected.review?.reviewed_by_name} />
 
@@ -932,7 +932,7 @@ export default function Applications() {
                   <Button onClick={() => setConfirmStep1Open(true)} disabled={acting}>
                     {acting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     <CheckCircle2 className="mr-2 h-4 w-4" />
-                    Submit to Reviewing Officer
+                    Submit to Registration Module
                   </Button>
                 </div>
               )}
@@ -944,7 +944,7 @@ export default function Applications() {
                   <div className="space-y-3 my-2">
                     <p className="text-sm text-muted-foreground">
                       Please verify the details below are correct. Once confirmed, this application
-                      will be sent to the Reviewing Officer.
+                      will be sent to the Registration Module.
                     </p>
                     <div className="rounded-md border p-3 space-y-2 text-sm">
                       <div className="flex justify-between">
@@ -1022,7 +1022,7 @@ export default function Applications() {
                       <SelectTrigger><SelectValue placeholder="Select step" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="1">Step 1 — Data Entry</SelectItem>
-                        {actingStep === 3 && <SelectItem value="2">Step 2 — Reviewing Officer</SelectItem>}
+                        {actingStep === 3 && <SelectItem value="2">Step 2 — Registration Module</SelectItem>}
                       </SelectContent>
                     </Select>
                   </div>

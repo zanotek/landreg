@@ -161,13 +161,47 @@ function ProprietorFields({ value, onChange, label }) {
   )
 }
 
+function ParcelFields({ newParcel, setNewParcel }) {
+  return (
+    <div className="rounded-md border p-3 space-y-2">
+      <p className="text-xs font-semibold text-muted-foreground uppercase">Parcel Details</p>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1"><Label className="text-xs">Parcel Number *</Label>
+          <Input required value={newParcel.parcel_number} onChange={(e) => setNewParcel({ ...newParcel, parcel_number: e.target.value })} /></div>
+        <div className="space-y-1"><Label className="text-xs">ZUPIN</Label>
+          <Input value={newParcel.zupin} onChange={(e) => setNewParcel({ ...newParcel, zupin: e.target.value })} placeholder="Zanzibar Unique Parcel ID" /></div>
+        <div className="space-y-1"><Label className="text-xs">House No.</Label>
+          <Input value={newParcel.house_number} onChange={(e) => setNewParcel({ ...newParcel, house_number: e.target.value })} placeholder="Optional" /></div>
+        <div className="space-y-1"><Label className="text-xs">Area (m²) *</Label>
+          <Input required type="number" value={newParcel.area_sqm} onChange={(e) => setNewParcel({ ...newParcel, area_sqm: e.target.value })} /></div>
+        <div className="space-y-1"><Label className="text-xs">Region</Label>
+          <Select value={newParcel.region || ''} onValueChange={(v) => setNewParcel({ ...newParcel, region: v })}>
+            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+            <SelectContent>{REGIONS.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
+          </Select></div>
+        <div className="space-y-1"><Label className="text-xs">Shehia</Label>
+          <Input value={newParcel.shehia} onChange={(e) => setNewParcel({ ...newParcel, shehia: e.target.value })} placeholder="e.g. Mwanakwerekwe" /></div>
+        <div className="space-y-1"><Label className="text-xs">District *</Label>
+          <Select value={newParcel.district} onValueChange={(v) => setNewParcel({ ...newParcel, district: v })}>
+            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+            <SelectContent>{DISTRICTS.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
+          </Select></div>
+        <div className="space-y-1"><Label className="text-xs">Land Use *</Label>
+          <Select value={newParcel.land_use} onValueChange={(v) => setNewParcel({ ...newParcel, land_use: v })}>
+            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+            <SelectContent>{LAND_USE.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
+          </Select></div>
+        <div className="space-y-1 col-span-2"><Label className="text-xs">Location Description *</Label>
+          <Textarea rows={2} required value={newParcel.location_description} onChange={(e) => setNewParcel({ ...newParcel, location_description: e.target.value })} /></div>
+      </div>
+    </div>
+  )
+}
+
 function Step1Fields({
   af, setAf, pp, setPp, cps, setCps,
   allParcels, showNewParcel, setShowNewParcel, newParcel, setNewParcel,
 }) {
-  const availableParcels = af.application_type === 'new_registration'
-    ? allParcels.filter(p => p.status !== 'registered')
-    : allParcels
   return (
     <div className="space-y-4">
 
@@ -201,65 +235,40 @@ function Step1Fields({
           </div>
 
           {/* Parcel */}
-          <div className="space-y-1.5">
-            <Label>Existing Parcel</Label>
-            <Select value={af.parcel} onValueChange={(v) => { setAf({ ...af, parcel: v }); setShowNewParcel(false) }}>
-              <SelectTrigger><SelectValue placeholder="Select parcel" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None / New Parcel</SelectItem>
-                {availableParcels.map((p) => (
-                  <SelectItem key={p.id} value={String(p.id)}>{p.parcel_number} — {p.district_display}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          {af.parcel === 'none' && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <input type="checkbox" id="showNP" checked={showNewParcel}
-                  onChange={(e) => setShowNewParcel(e.target.checked)} className="h-4 w-4" />
-                <label htmlFor="showNP" className="text-sm">Register new parcel inline</label>
+          {af.application_type === 'new_registration' ? (
+            <ParcelFields newParcel={newParcel} setNewParcel={setNewParcel} />
+          ) : (
+            <>
+              <div className="space-y-1.5">
+                <Label>Existing Parcel</Label>
+                <Select value={af.parcel} onValueChange={(v) => { setAf({ ...af, parcel: v }); setShowNewParcel(false) }}>
+                  <SelectTrigger><SelectValue placeholder="Select parcel" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None / New Parcel</SelectItem>
+                    {allParcels.map((p) => (
+                      <SelectItem key={p.id} value={String(p.id)}>{p.parcel_number} — {p.district_display}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              {showNewParcel ? (
-                <div className="rounded-md border p-3 space-y-2">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase">New Parcel Details</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1"><Label className="text-xs">Parcel Number *</Label>
-                      <Input required value={newParcel.parcel_number} onChange={(e) => setNewParcel({ ...newParcel, parcel_number: e.target.value })} /></div>
-                    <div className="space-y-1"><Label className="text-xs">ZUPIN</Label>
-                      <Input value={newParcel.zupin} onChange={(e) => setNewParcel({ ...newParcel, zupin: e.target.value })} placeholder="Zanzibar Unique Parcel ID" /></div>
-                    <div className="space-y-1"><Label className="text-xs">House No.</Label>
-                      <Input value={newParcel.house_number} onChange={(e) => setNewParcel({ ...newParcel, house_number: e.target.value })} placeholder="Optional" /></div>
-                    <div className="space-y-1"><Label className="text-xs">Area (m²) *</Label>
-                      <Input required type="number" value={newParcel.area_sqm} onChange={(e) => setNewParcel({ ...newParcel, area_sqm: e.target.value })} /></div>
-                    <div className="space-y-1"><Label className="text-xs">Region</Label>
-                      <Select value={newParcel.region || ''} onValueChange={(v) => setNewParcel({ ...newParcel, region: v })}>
-                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                        <SelectContent>{REGIONS.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
-                      </Select></div>
-                    <div className="space-y-1"><Label className="text-xs">Shehia</Label>
-                      <Input value={newParcel.shehia} onChange={(e) => setNewParcel({ ...newParcel, shehia: e.target.value })} placeholder="e.g. Mwanakwerekwe" /></div>
-                    <div className="space-y-1"><Label className="text-xs">District *</Label>
-                      <Select value={newParcel.district} onValueChange={(v) => setNewParcel({ ...newParcel, district: v })}>
-                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                        <SelectContent>{DISTRICTS.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
-                      </Select></div>
-                    <div className="space-y-1"><Label className="text-xs">Land Use *</Label>
-                      <Select value={newParcel.land_use} onValueChange={(v) => setNewParcel({ ...newParcel, land_use: v })}>
-                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                        <SelectContent>{LAND_USE.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
-                      </Select></div>
-                    <div className="space-y-1 col-span-2"><Label className="text-xs">Location Description *</Label>
-                      <Textarea rows={2} required value={newParcel.location_description} onChange={(e) => setNewParcel({ ...newParcel, location_description: e.target.value })} /></div>
+              {af.parcel === 'none' && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" id="showNP" checked={showNewParcel}
+                      onChange={(e) => setShowNewParcel(e.target.checked)} className="h-4 w-4" />
+                    <label htmlFor="showNP" className="text-sm">Register new parcel inline</label>
                   </div>
-                </div>
-              ) : (
-                <div className="space-y-1.5">
-                  <Label>Requested Parcel Number</Label>
-                  <Input value={af.parcel_number_requested} onChange={(e) => setAf({ ...af, parcel_number_requested: e.target.value })} placeholder="e.g. ZNZ-MJN-001" />
+                  {showNewParcel ? (
+                    <ParcelFields newParcel={newParcel} setNewParcel={setNewParcel} />
+                  ) : (
+                    <div className="space-y-1.5">
+                      <Label>Requested Parcel Number</Label>
+                      <Input value={af.parcel_number_requested} onChange={(e) => setAf({ ...af, parcel_number_requested: e.target.value })} placeholder="e.g. ZNZ-MJN-001" />
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
+            </>
           )}
 
           {/* Proprietors */}
@@ -414,15 +423,18 @@ export default function Applications() {
 
   const buildStep1Payload = (af, np, showNP, pp, cps) => {
     const nullDate = (v) => v || null
+    const parcelId = af.parcel !== 'none' ? Number(af.parcel) : null
+    const isNewReg = af.application_type === 'new_registration'
+    const includeNewParcel = np && (isNewReg ? !parcelId : showNP && !parcelId)
     return {
       ...af,
-      parcel: af.parcel !== 'none' ? Number(af.parcel) : null,
+      parcel: parcelId,
       registration_date: nullDate(af.registration_date),
       first_registration_date: nullDate(af.first_registration_date),
       issued_date: nullDate(af.issued_date),
       expiry_date: nullDate(af.expiry_date),
       received_date: nullDate(af.received_date),
-      ...(showNP && af.parcel === 'none' ? { new_parcel: np } : {}),
+      ...(includeNewParcel ? { new_parcel: np } : {}),
       proprietors: [{ ...pp, is_primary: true }, ...cps.map((c) => ({ ...c, is_primary: false }))],
     }
   }
@@ -467,6 +479,20 @@ export default function Applications() {
     })
     setStep1PrimaryEdit({ ...EMPTY_PROPRIETOR(true), ...pp, is_primary: true })
     setStep1CoPropsEdit((app.proprietors?.filter((p) => !p.is_primary) || []).map((p) => ({ ...p })))
+    if (app.application_type === 'new_registration' && app.parcel_detail) {
+      const pd = app.parcel_detail
+      setNewParcel({
+        parcel_number: pd.parcel_number || '',
+        zupin: pd.zupin || '',
+        house_number: pd.house_number || '',
+        district: pd.district || '',
+        region: pd.region || '',
+        shehia: pd.shehia || '',
+        area_sqm: pd.area_sqm || '',
+        land_use: pd.land_use || '',
+        location_description: pd.location_description || '',
+      })
+    }
     setStep2Form({
       registration_number: app.review?.registration_number || '',
       volume_ref: app.review?.volume_ref || '',

@@ -1,9 +1,3 @@
-databases:
-  - name: landreg-db
-    databaseName: landreg
-    user: landreg
-    plan: free
-
 services:
   # ── Django API ─────────────────────────────────────────────────────────────
   - type: web
@@ -16,9 +10,7 @@ services:
     healthCheckPath: /health/
     envVars:
       - key: DATABASE_URL
-        fromDatabase:
-          name: landreg-db
-          property: connectionString
+        value: "postgresql://neondb_owner:npg_wM4Q7ZGVTyWC@ep-fragrant-meadow-atmauge8-pooler.c-9.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
       - key: SECRET_KEY
         generateValue: true
       - key: DEBUG

@@ -446,13 +446,23 @@ class TitleDeedViewSet(viewsets.ModelViewSet):
             qs = qs.filter(status=status)
         return qs
 
-    def perform_create(self, serializer):
-        instance = serializer.save(registered_by=self.request.user)
-        _audit(self.request, 'create', 'deed', instance.id, instance.deed_number)
+    def create(self, request, *args, **kwargs):
+        return Response(
+            {'detail': 'Deeds are created automatically on application approval.'},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
 
-    def perform_update(self, serializer):
-        instance = serializer.save()
-        _audit(self.request, 'update', 'deed', instance.id, instance.deed_number)
+    def update(self, request, *args, **kwargs):
+        return Response(
+            {'detail': 'Deeds cannot be manually edited.'},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
+
+    def partial_update(self, request, *args, **kwargs):
+        return Response(
+            {'detail': 'Deeds cannot be manually edited.'},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
 
     def destroy(self, request, *args, **kwargs):
         obj = self.get_object()

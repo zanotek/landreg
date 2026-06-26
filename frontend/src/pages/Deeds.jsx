@@ -24,15 +24,15 @@ export default function Deeds() {
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [loadError, setLoadError] = useState('')
-  const [printingDeed, setPrintingDeed] = useState(null)
+  const [printMode, setPrintMode] = useState(null) // 'register' | deed object | null
 
   useEffect(() => {
-    if (!printingDeed) return
+    if (!printMode) return
     window.print()
-    const handler = () => setPrintingDeed(null)
+    const handler = () => setPrintMode(null)
     window.addEventListener('afterprint', handler, { once: true })
     return () => window.removeEventListener('afterprint', handler)
-  }, [printingDeed])
+  }, [printMode])
 
   const load = useCallback(() => {
     setLoading(true)
@@ -58,7 +58,7 @@ export default function Deeds() {
           <h1 className="text-2xl font-bold">Register</h1>
           <p className="text-muted-foreground mt-1">Land title deeds — generated automatically on application approval</p>
         </div>
-        <Button variant="outline" onClick={() => window.print()}>
+        <Button variant="outline" onClick={() => setPrintMode('register')}>
           <Printer className="mr-2 h-4 w-4" /> Print Register
         </Button>
       </div>
@@ -113,7 +113,7 @@ export default function Deeds() {
                 <TableCell><Badge variant={STATUS_BADGE[d.status] || 'outline'}>{d.status_display}</Badge></TableCell>
                 <TableCell className="text-muted-foreground text-sm">{d.registered_by_name || '—'}</TableCell>
                 <TableCell className="text-right">
-                  <Button variant="ghost" size="icon" title="Print" onClick={() => setPrintingDeed(d)}><Printer className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" title="Print" onClick={() => setPrintMode(d)}><Printer className="h-4 w-4" /></Button>
                 </TableCell>
               </TableRow>
             ))}
@@ -125,7 +125,7 @@ export default function Deeds() {
       <div className="hidden print:block text-black text-[10pt]">
 
         {/* ── Individual deed certificate ── */}
-        {printingDeed ? (
+        {printMode && printMode !== 'register' ? (
           <div className="max-w-[700px] mx-auto">
             {/* Header */}
             <div className="text-center border-b-2 border-black pb-3 mb-5">
@@ -137,11 +137,11 @@ export default function Deeds() {
 
             {/* CRO + Certificate row */}
             <div className="flex justify-between mb-4 text-[9pt]">
-              <div><span className="font-bold">CRO No.:</span> <span className="font-mono">{printingDeed.deed_number}</span></div>
-              {printingDeed.certificate_number && (
-                <div><span className="font-bold">Certificate No.:</span> <span className="font-mono">{printingDeed.certificate_number}</span></div>
+              <div><span className="font-bold">CRO No.:</span> <span className="font-mono">{printMode.deed_number}</span></div>
+              {printMode.certificate_number && (
+                <div><span className="font-bold">Certificate No.:</span> <span className="font-mono">{printMode.certificate_number}</span></div>
               )}
-              <div><span className="font-bold">Status:</span> {printingDeed.status_display}</div>
+              <div><span className="font-bold">Status:</span> {printMode.status_display}</div>
             </div>
 
             {/* Sections */}
@@ -149,32 +149,32 @@ export default function Deeds() {
               {
                 title: 'Property Details',
                 rows: [
-                  ['Parcel Number', printingDeed.parcel_number],
+                  ['Parcel Number', printMode.parcel_number],
                 ],
               },
               {
                 title: 'Ownership Details',
                 rows: [
-                  ['Full Name', printingDeed.owner_name],
-                  ['Identification No.', printingDeed.owner_national_id],
-                  ['Ownership Type', printingDeed.ownership_type_display || '—'],
+                  ['Full Name', printMode.owner_name],
+                  ['Identification No.', printMode.owner_national_id],
+                  ['Ownership Type', printMode.ownership_type_display || '—'],
                 ],
               },
               {
                 title: 'Registration Details',
                 rows: [
-                  ['Registration Date', formatDate(printingDeed.registration_date)],
-                  ['First Registration Date', formatDate(printingDeed.first_registration_date) || '—'],
-                  ['Issued Date', formatDate(printingDeed.issued_date) || '—'],
-                  ['Expiry Date', formatDate(printingDeed.expiry_date) || '—'],
+                  ['Registration Date', formatDate(printMode.registration_date)],
+                  ['First Registration Date', formatDate(printMode.first_registration_date) || '—'],
+                  ['Issued Date', formatDate(printMode.issued_date) || '—'],
+                  ['Expiry Date', formatDate(printMode.expiry_date) || '—'],
                 ],
               },
               {
                 title: 'Receipt Information',
                 rows: [
-                  ['Received From', printingDeed.received_from || '—'],
-                  ['Received Date', formatDate(printingDeed.received_date) || '—'],
-                  ['Received By', printingDeed.received_by || '—'],
+                  ['Received From', printMode.received_from || '—'],
+                  ['Received Date', formatDate(printMode.received_date) || '—'],
+                  ['Received By', printMode.received_by || '—'],
                 ],
               },
             ].map(({ title, rows }) => (
@@ -194,10 +194,10 @@ export default function Deeds() {
             ))}
 
             {/* Notes */}
-            {printingDeed.notes && (
+            {printMode.notes && (
               <div className="mb-4">
                 <h2 className="text-[9pt] font-bold uppercase tracking-wide border-b border-black mb-1 pb-0.5">Notes</h2>
-                <p className="text-[9pt] mt-1">{printingDeed.notes}</p>
+                <p className="text-[9pt] mt-1">{printMode.notes}</p>
               </div>
             )}
 
@@ -206,7 +206,7 @@ export default function Deeds() {
               <div>
                 <div className="border-t border-black pt-1">
                   <p className="font-medium">Registered By</p>
-                  <p className="text-gray-600">{printingDeed.registered_by_name || '—'}</p>
+                  <p className="text-gray-600">{printMode.registered_by_name || '—'}</p>
                 </div>
               </div>
               <div>

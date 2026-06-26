@@ -20,22 +20,27 @@ const STATUS_BADGE = {
   cancelled: { label: 'Cancelled', variant: 'secondary' },
 }
 
-function StatCard({ title, value, icon: Icon, desc, color = 'bg-primary/10 text-primary' }) {
-  return (
-    <Card>
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">{title}</p>
-            <p className="text-3xl font-bold mt-1">{value ?? <Skeleton className="h-8 w-16" />}</p>
-            {desc && <p className="text-xs text-muted-foreground mt-1">{desc}</p>}
-          </div>
-          <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${color}`}>
-            <Icon className="h-6 w-6" />
-          </div>
+function StatCard({ title, value, icon: Icon, desc, color = 'bg-primary/10 text-primary', to }) {
+  const content = (
+    <CardContent className="p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-muted-foreground">{title}</p>
+          <p className="text-3xl font-bold mt-1">{value ?? <Skeleton className="h-8 w-16" />}</p>
+          {desc && <p className="text-xs text-muted-foreground mt-1">{desc}</p>}
         </div>
-      </CardContent>
-    </Card>
+        <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${color}`}>
+          <Icon className="h-6 w-6" />
+        </div>
+      </div>
+    </CardContent>
+  )
+  return to ? (
+    <Link to={to} className="block">
+      <Card className="hover:shadow-md transition-shadow cursor-pointer">{content}</Card>
+    </Link>
+  ) : (
+    <Card>{content}</Card>
   )
 }
 
@@ -71,10 +76,10 @@ export default function Dashboard() {
 
       {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Applications" value={data?.total_applications} icon={ClipboardList} />
-        <StatCard title="In Progress" value={data ? (data.step1_applications + data.step2_applications + data.step3_applications) : undefined} icon={ClipboardList} color="bg-yellow-100 text-yellow-600" desc="across all steps" />
-        <StatCard title="Returned" value={data?.returned_applications} icon={RotateCcw} color="bg-red-100 text-red-600" desc="awaiting correction" />
-        <StatCard title="Approved" value={data?.approved_applications} icon={CheckCircle2} color="bg-green-100 text-green-600" />
+        <StatCard title="Total Applications" value={data?.total_applications} icon={ClipboardList} to="/applications" />
+        <StatCard title="In Progress" value={data ? (data.step1_applications + data.step2_applications + data.step3_applications) : undefined} icon={ClipboardList} color="bg-yellow-100 text-yellow-600" desc="across all steps" to="/applications?status=step2" />
+        <StatCard title="Returned" value={data?.returned_applications} icon={RotateCcw} color="bg-red-100 text-red-600" desc="awaiting correction" to="/applications?status=returned" />
+        <StatCard title="Approved" value={data?.approved_applications} icon={CheckCircle2} color="bg-green-100 text-green-600" to="/applications?status=approved" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

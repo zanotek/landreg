@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { applications as appsApi, parcels as parcelsApi } from '@/lib/api'
 import { useAuth } from '@/hooks/useAuth.jsx'
 import { Button } from '@/components/ui/button'
@@ -352,6 +353,7 @@ function Step1Fields({
 export default function Applications() {
   const { user } = useAuth()
   const role = user?.profile?.role
+  const [searchParams] = useSearchParams()
   const isSuperuser = user?.is_superuser
   const isDataEntry = isSuperuser || ['data_entry', 'admin'].includes(role)
   const isReviewer = isSuperuser || ['reviewing_officer', 'admin'].includes(role)
@@ -360,7 +362,7 @@ export default function Applications() {
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [filterStatus, setFilterStatus] = useState('all')
+  const [filterStatus, setFilterStatus] = useState(() => searchParams.get('status') || 'all')
   const [allParcels, setAllParcels] = useState([])
 
   // ── Create dialog state ───────────────────────────────────────────────────

@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatDate } from '@/lib/utils'
-import { Search, Pencil, Printer, Loader2 } from 'lucide-react'
+import { Search, Printer, Loader2 } from 'lucide-react'
 
 const STATUSES = [
   ['active', 'Active'], ['transferred', 'Transferred'],
@@ -151,7 +151,7 @@ export default function Deeds() {
               <TableHead>Reg. Date</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Registered By</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className="text-right">Print</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -162,7 +162,7 @@ export default function Deeds() {
             ) : data.length === 0 ? (
               <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-10">No deeds found</TableCell></TableRow>
             ) : data.map((d) => (
-              <TableRow key={d.id}>
+              <TableRow key={d.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openEdit(d)}>
                 <TableCell className="font-mono font-medium">{d.deed_number}</TableCell>
                 <TableCell className="font-mono text-sm">{d.parcel_number}</TableCell>
                 <TableCell className="font-medium">{d.owner_name}</TableCell>
@@ -170,8 +170,7 @@ export default function Deeds() {
                 <TableCell className="text-sm">{formatDate(d.registration_date)}</TableCell>
                 <TableCell><Badge variant={STATUS_BADGE[d.status] || 'outline'}>{d.status_display}</Badge></TableCell>
                 <TableCell className="text-muted-foreground text-sm">{d.registered_by_name || '—'}</TableCell>
-                <TableCell className="text-right space-x-1">
-                  <Button variant="ghost" size="icon" title="Edit" onClick={() => openEdit(d)}><Pencil className="h-4 w-4" /></Button>
+                <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                   <Button variant="ghost" size="icon" title="Print" onClick={() => setPrintMode(d)}><Printer className="h-4 w-4" /></Button>
                 </TableCell>
               </TableRow>

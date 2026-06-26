@@ -452,17 +452,9 @@ class TitleDeedViewSet(viewsets.ModelViewSet):
             status=status.HTTP_405_METHOD_NOT_ALLOWED,
         )
 
-    def update(self, request, *args, **kwargs):
-        return Response(
-            {'detail': 'Deeds cannot be manually edited.'},
-            status=status.HTTP_405_METHOD_NOT_ALLOWED,
-        )
-
-    def partial_update(self, request, *args, **kwargs):
-        return Response(
-            {'detail': 'Deeds cannot be manually edited.'},
-            status=status.HTTP_405_METHOD_NOT_ALLOWED,
-        )
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        _audit(self.request, 'update', 'deed', instance.id, instance.deed_number)
 
     def destroy(self, request, *args, **kwargs):
         obj = self.get_object()

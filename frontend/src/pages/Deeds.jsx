@@ -2,20 +2,32 @@ import { useState, useEffect, useCallback } from 'react'
 import { deeds as deedsApi } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatDate } from '@/lib/utils'
-import { Search, Printer } from 'lucide-react'
+import { Search, Pencil, Printer, Loader2 } from 'lucide-react'
 
 const STATUSES = [
   ['active', 'Active'], ['transferred', 'Transferred'],
   ['cancelled', 'Cancelled'], ['suspended', 'Suspended'],
 ]
+const OWNERSHIP_TYPES = [
+  ['sole', 'Sole Ownership'], ['joint', 'Joint Ownership'], ['company', 'Company'],
+]
 const STATUS_BADGE = {
   active: 'success', transferred: 'info', cancelled: 'destructive', suspended: 'secondary',
+}
+const EMPTY_FORM = {
+  deed_number: '', certificate_number: '', ownership_type: '',
+  registration_date: '', first_registration_date: '', issued_date: '',
+  received_from: '', received_date: '', received_by: '', expiry_date: '',
+  status: 'active', notes: '',
 }
 
 export default function Deeds() {
@@ -24,6 +36,11 @@ export default function Deeds() {
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [loadError, setLoadError] = useState('')
+  const [open, setOpen] = useState(false)
+  const [editing, setEditing] = useState(null)
+  const [form, setForm] = useState(EMPTY_FORM)
+  const [saving, setSaving] = useState(false)
+  const [formError, setFormError] = useState('')
   const [printMode, setPrintMode] = useState(null) // 'register' | deed object | null
 
   useEffect(() => {
@@ -44,6 +61,47 @@ export default function Deeds() {
   }, [search, filterStatus])
 
   useEffect(() => { load() }, [load])
+
+  const openEdit = (d) => {
+    setEditing(d)
+    setForm({
+      deed_number: d.deed_number,
+      certificate_number: d.certificate_number || '',
+      ownership_type: d.ownership_type || '',
+      registration_date: d.registration_date || '',
+      first_registration_date: d.first_registration_date || '',
+      issued_date: d.issued_date || '',
+      received_from: d.received_from || '',
+      received_date: d.received_date || '',
+      received_by: d.received_by || '',
+      expiry_date: d.expiry_date || '',
+      status: d.status,
+      notes: d.notes || '',
+    })
+    setFormError('')
+    setOpen(true)
+  }
+
+  const handleSave = async (e) => {
+    e.preventDefault(); setSaving(true); setFormError('')
+    try {
+      const nullDate = (v) => v || null
+      await deedsApi.update(editing.id, {
+        ...form,
+        first_registration_date: nullDate(form.first_registration_date),
+        issued_date: nullDate(form.issued_date),
+        received_date: nullDate(form.received_date),
+        expiry_date: nullDate(form.expiry_date),
+      })
+      setOpen(false); load()
+    } catch (err) {
+      const d = err.response?.data
+      setFormError(typeof d === 'object' ? Object.values(d).flat().join(' ') : 'An error occurred.')
+    } finally { setSaving(false) }
+  }
+
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+  const setV = (k) => (v) => setForm((f) => ({ ...f, [k]: v }))
 
   const printDate = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })
 
@@ -93,7 +151,7 @@ export default function Deeds() {
               <TableHead>Reg. Date</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Registered By</TableHead>
-              <TableHead className="text-right">Print</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -112,7 +170,8 @@ export default function Deeds() {
                 <TableCell className="text-sm">{formatDate(d.registration_date)}</TableCell>
                 <TableCell><Badge variant={STATUS_BADGE[d.status] || 'outline'}>{d.status_display}</Badge></TableCell>
                 <TableCell className="text-muted-foreground text-sm">{d.registered_by_name || '—'}</TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-right space-x-1">
+                  <Button variant="ghost" size="icon" title="Edit" onClick={() => openEdit(d)}><Pencil className="h-4 w-4" /></Button>
                   <Button variant="ghost" size="icon" title="Print" onClick={() => setPrintMode(d)}><Printer className="h-4 w-4" /></Button>
                 </TableCell>
               </TableRow>
@@ -292,6 +351,92 @@ export default function Deeds() {
         )}
       </div>
 
+      {/* ── Edit dialog ── */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-lg lg:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Title Deed — {editing?.deed_number}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSave} className="space-y-4 mt-2">
+            {formError && <p className="text-sm text-destructive">{formError}</p>}
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Deed Number</Label>
+                <Input value={form.deed_number} onChange={set('deed_number')} disabled />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Certificate Number</Label>
+                <Input value={form.certificate_number} onChange={set('certificate_number')} placeholder="e.g. CERT-001" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Ownership Type</Label>
+                <Select value={form.ownership_type || ''} onValueChange={setV('ownership_type')}>
+                  <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                  <SelectContent>{OWNERSHIP_TYPES.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Status</Label>
+                <Select value={form.status} onValueChange={setV('status')}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{STATUSES.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Registration Date *</Label>
+                <Input required type="date" value={form.registration_date} onChange={set('registration_date')} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>First Registration Date</Label>
+                <Input type="date" value={form.first_registration_date} onChange={set('first_registration_date')} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Issued Date</Label>
+                <Input type="date" value={form.issued_date} onChange={set('issued_date')} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Expiry Date</Label>
+                <Input type="date" value={form.expiry_date} onChange={set('expiry_date')} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Received From</Label>
+                <Input value={form.received_from} onChange={set('received_from')} placeholder="Person or entity" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Received Date</Label>
+                <Input type="date" value={form.received_date} onChange={set('received_date')} />
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label>Received By</Label>
+                <Input value={form.received_by} onChange={set('received_by')} placeholder="Officer / recipient name" />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Notes</Label>
+              <Textarea value={form.notes} onChange={set('notes')} placeholder="Additional remarks…" />
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={saving}>
+                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

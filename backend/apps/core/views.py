@@ -30,6 +30,13 @@ def _get_ip(request):
     return request.META.get('REMOTE_ADDR')
 
 
+def _locked_response(label):
+    return Response(
+        {'detail': f'{label} is approved and can no longer be edited.'},
+        status=status.HTTP_403_FORBIDDEN,
+    )
+
+
 def _audit(request, action, resource_type, resource_id='', resource_label='', detail=''):
     AuditLog.objects.create(
         user=request.user if request.user.is_authenticated else None,
@@ -258,6 +265,18 @@ class ApplicationViewSet(viewsets.ModelViewSet):
             serializer.instance.id, serializer.instance.application_number,
         )
 
+    def update(self, request, *args, **kwargs):
+        app = self.get_object()
+        if app.status == 'approved':
+            return _locked_response(app.application_number)
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        app = self.get_object()
+        if app.status == 'approved':
+            return _locked_response(app.application_number)
+        return super().partial_update(request, *args, **kwargs)
+
     def perform_update(self, serializer):
         instance = serializer.save()
         _audit(self.request, 'update', 'application', instance.id, instance.application_number)
@@ -274,6 +293,8 @@ class ApplicationViewSet(viewsets.ModelViewSet):
     def submit_step1(self, request, pk=None):
         """Data Entry Officer submits Step 1, advancing to Step 2."""
         app = self.get_object()
+        if app.status == 'approved':
+            return _locked_response(app.application_number)
         serializer = ApplicationStep1Serializer(
             app, data=request.data, partial=True,
             context={'request': request},
@@ -289,6 +310,8 @@ class ApplicationViewSet(viewsets.ModelViewSet):
     def submit_step2(self, request, pk=None):
         """Reviewing Officer submits Step 2: advances to Step 3 or returns."""
         app = self.get_object()
+        if app.status == 'approved':
+            return _locked_response(app.application_number)
         returned_to = request.data.get('returned_to_step')
 
         if returned_to:
@@ -324,6 +347,8 @@ class ApplicationViewSet(viewsets.ModelViewSet):
     def submit_step3(self, request, pk=None):
         """Registrar approves or returns the application."""
         app = self.get_object()
+        if app.status == 'approved':
+            return _locked_response(app.application_number)
         returned_to = request.data.get('returned_to_step')
 
         if returned_to:
@@ -452,9 +477,11 @@ class TitleDeedViewSet(viewsets.ModelViewSet):
             status=status.HTTP_405_METHOD_NOT_ALLOWED,
         )
 
-    def perform_update(self, serializer):
-        instance = serializer.save()
-        _audit(self.request, 'update', 'deed', instance.id, instance.deed_number)
+    def update(self, request, *args, **kwargs):
+        return _locked_response('Title deed')
+
+    def partial_update(self, request, *args, **kwargs):
+        return _locked_response('Title deed')
 
     def destroy(self, request, *args, **kwargs):
         obj = self.get_object()

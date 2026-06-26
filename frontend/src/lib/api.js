@@ -112,3 +112,8 @@ export const applications = {
   submitStep3: (id, data) => api.patch(`/applications/${id}/submit-step3/`, data),
   delete: (id) => api.delete(`/applications/${id}/`),
 }
+
+export const auditLog = {
+  list: (params) => api.get('/audit-log/', { params }),
+  getPage: (url) => api.get(url),
+}

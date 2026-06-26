@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     MeView, StatsView,
     UserViewSet, OwnerViewSet, LandParcelViewSet, ApplicationViewSet, TitleDeedViewSet,
-    ApplicationTypeViewSet, ApplicationStatusViewSet,
+    ApplicationTypeViewSet, ApplicationStatusViewSet, AuditLogViewSet,
 )
 
 router = DefaultRouter()
@@ -14,6 +14,7 @@ router.register(r'applications', ApplicationViewSet, basename='application')
 router.register(r'deeds', TitleDeedViewSet, basename='deed')
 router.register(r'application-types', ApplicationTypeViewSet, basename='application-type')
 router.register(r'application-statuses', ApplicationStatusViewSet, basename='application-status')
+router.register(r'audit-log', AuditLogViewSet, basename='audit-log')
 
 urlpatterns = [
     path('me/', MeView.as_view(), name='me'),

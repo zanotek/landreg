@@ -321,3 +321,35 @@ class ApplicationStatus(models.Model):
 
     def __str__(self):
         return self.label
+
+
+class AuditLog(models.Model):
+    ACTION_CHOICES = [
+        ('login', 'Login'),
+        ('create', 'Create'),
+        ('update', 'Update'),
+        ('delete_attempt', 'Delete Attempt'),
+        ('submit_step1', 'Submit Step 1'),
+        ('submit_step2', 'Submit Step 2'),
+        ('submit_step3', 'Submit Step 3'),
+        ('return_application', 'Return Application'),
+        ('set_password', 'Set Password'),
+    ]
+
+    user = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='audit_logs',
+    )
+    action = models.CharField(max_length=30, choices=ACTION_CHOICES)
+    resource_type = models.CharField(max_length=50)
+    resource_id = models.CharField(max_length=50, blank=True)
+    resource_label = models.CharField(max_length=200, blank=True)
+    detail = models.TextField(blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f"{self.user} – {self.action} {self.resource_type} {self.resource_id}"

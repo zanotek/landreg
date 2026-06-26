@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatDate } from '@/lib/utils'
-import { Plus, Search, Pencil, Trash2, Loader2 } from 'lucide-react'
+import { Plus, Search, Pencil, Loader2 } from 'lucide-react'
 
 const EMPTY = { national_id: '', first_name: '', last_name: '', phone: '', email: '', address: '' }
 
@@ -49,11 +49,6 @@ export default function Owners() {
       const d = err.response?.data
       setError(typeof d === 'object' ? Object.values(d).flat().join(' ') : 'An error occurred.')
     } finally { setSaving(false) }
-  }
-
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this owner?')) return
-    await ownersApi.delete(id); load()
   }
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
@@ -108,7 +103,6 @@ export default function Owners() {
                 <TableCell className="text-muted-foreground text-sm">{formatDate(o.created_at)}</TableCell>
                 <TableCell className="text-right space-x-2">
                   <Button variant="ghost" size="icon" onClick={() => openEdit(o)}><Pencil className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleDelete(o.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                 </TableCell>
               </TableRow>
             ))}

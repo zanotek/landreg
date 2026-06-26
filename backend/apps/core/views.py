@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 from .models import (
     Owner, LandParcel, Application,
     ApplicationReview, ApplicationApproval, TitleDeed,
-    ApplicationType, ApplicationStatus,
+    ApplicationType, ApplicationStatus, AuditLog,
 )
 from .serializers import (
     UserSerializer, UserCreateSerializer, UserUpdateSerializer,
@@ -19,7 +19,27 @@ from .serializers import (
     ApplicationReviewWriteSerializer, ApplicationApprovalWriteSerializer,
     TitleDeedSerializer, TitleDeedWriteSerializer,
     ApplicationTypeSerializer, ApplicationStatusSerializer,
+    AuditLogSerializer,
 )
+
+
+def _get_ip(request):
+    x_forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded:
+        return x_forwarded.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR')
+
+
+def _audit(request, action, resource_type, resource_id='', resource_label='', detail=''):
+    AuditLog.objects.create(
+        user=request.user if request.user.is_authenticated else None,
+        action=action,
+        resource_type=resource_type,
+        resource_id=str(resource_id),
+        resource_label=resource_label,
+        detail=detail,
+        ip_address=_get_ip(request),
+    )
 
 
 class IsAdminOrOfficer(permissions.BasePermission):
@@ -93,6 +113,22 @@ class UserViewSet(viewsets.ModelViewSet):
             return UserUpdateSerializer
         return UserSerializer
 
+    def perform_create(self, serializer):
+        instance = serializer.save()
+        _audit(self.request, 'create', 'user', instance.id, instance.username)
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        _audit(self.request, 'update', 'user', instance.id, instance.username)
+
+    def destroy(self, request, *args, **kwargs):
+        obj = self.get_object()
+        _audit(request, 'delete_attempt', 'user', obj.id, obj.username)
+        return Response(
+            {'detail': 'Deleting records is not permitted.'},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
+
     @action(detail=True, methods=['post'], url_path='set-password')
     def set_password(self, request, pk=None):
         user = self.get_object()
@@ -101,6 +137,7 @@ class UserViewSet(viewsets.ModelViewSet):
             return Response({'password': ['Must be at least 8 characters.']}, status=status.HTTP_400_BAD_REQUEST)
         user.set_password(password)
         user.save()
+        _audit(request, 'set_password', 'user', user.id, user.username)
         return Response({'detail': 'Password updated.'})
 
 
@@ -113,6 +150,22 @@ class OwnerViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['national_id', 'first_name', 'last_name', 'phone', 'email']
     ordering = ['last_name', 'first_name']
+
+    def perform_create(self, serializer):
+        instance = serializer.save()
+        _audit(self.request, 'create', 'owner', instance.id, str(instance))
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        _audit(self.request, 'update', 'owner', instance.id, str(instance))
+
+    def destroy(self, request, *args, **kwargs):
+        obj = self.get_object()
+        _audit(request, 'delete_attempt', 'owner', obj.id, str(obj))
+        return Response(
+            {'detail': 'Deleting records is not permitted.'},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
 
 
 class LandParcelViewSet(viewsets.ModelViewSet):
@@ -138,7 +191,20 @@ class LandParcelViewSet(viewsets.ModelViewSet):
         return qs
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        instance = serializer.save(created_by=self.request.user)
+        _audit(self.request, 'create', 'parcel', instance.id, instance.parcel_number)
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        _audit(self.request, 'update', 'parcel', instance.id, instance.parcel_number)
+
+    def destroy(self, request, *args, **kwargs):
+        obj = self.get_object()
+        _audit(request, 'delete_attempt', 'parcel', obj.id, obj.parcel_number)
+        return Response(
+            {'detail': 'Deleting records is not permitted.'},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
 
 
 # ── Applications ──────────────────────────────────────────────────────────────
@@ -187,6 +253,22 @@ class ApplicationViewSet(viewsets.ModelViewSet):
             step1_at=timezone.now(),
         )
         self._upsert_owner_from_application(serializer.instance)
+        _audit(
+            self.request, 'create', 'application',
+            serializer.instance.id, serializer.instance.application_number,
+        )
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        _audit(self.request, 'update', 'application', instance.id, instance.application_number)
+
+    def destroy(self, request, *args, **kwargs):
+        obj = self.get_object()
+        _audit(request, 'delete_attempt', 'application', obj.id, obj.application_number)
+        return Response(
+            {'detail': 'Deleting records is not permitted.'},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
 
     @action(detail=True, methods=['patch'], url_path='submit-step1')
     def submit_step1(self, request, pk=None):
@@ -200,6 +282,7 @@ class ApplicationViewSet(viewsets.ModelViewSet):
         serializer.save(status='step2', step1_by=request.user, step1_at=timezone.now())
         app.refresh_from_db()
         self._upsert_owner_from_application(app)
+        _audit(request, 'submit_step1', 'application', app.id, app.application_number)
         return Response(ApplicationListSerializer(app, context={'request': request}).data)
 
     @action(detail=True, methods=['patch'], url_path='submit-step2')
@@ -213,13 +296,15 @@ class ApplicationViewSet(viewsets.ModelViewSet):
             app.returned_to_step = returned_to
             app.return_reason = request.data.get('return_reason', '')
             app.save(update_fields=['status', 'returned_to_step', 'return_reason', 'updated_at'])
+            _audit(
+                request, 'return_application', 'application', app.id, app.application_number,
+                detail=f"Returned to step {returned_to}: {app.return_reason}",
+            )
         else:
             review_data = {
                 k: v for k, v in request.data.items()
                 if k not in ('returned_to_step', 'return_reason')
             }
-            # Empty string is invalid for DateField and violates the unique constraint
-            # on registration_number — coerce to None so the DB stores NULL instead.
             if not review_data.get('registration_number'):
                 review_data['registration_number'] = None
             if review_data.get('registration_entry_date') == '':
@@ -230,6 +315,7 @@ class ApplicationViewSet(viewsets.ModelViewSet):
             serializer.save(reviewed_by=request.user, reviewed_at=timezone.now())
             app.status = 'step3'
             app.save(update_fields=['status', 'updated_at'])
+            _audit(request, 'submit_step2', 'application', app.id, app.application_number)
 
         app.refresh_from_db()
         return Response(ApplicationListSerializer(app, context={'request': request}).data)
@@ -245,6 +331,10 @@ class ApplicationViewSet(viewsets.ModelViewSet):
             app.returned_to_step = returned_to
             app.return_reason = request.data.get('return_reason', '')
             app.save(update_fields=['status', 'returned_to_step', 'return_reason', 'updated_at'])
+            _audit(
+                request, 'return_application', 'application', app.id, app.application_number,
+                detail=f"Returned to step {returned_to}: {app.return_reason}",
+            )
         else:
             approval_data = {
                 k: v for k, v in request.data.items()
@@ -259,14 +349,13 @@ class ApplicationViewSet(viewsets.ModelViewSet):
             if app.application_type == 'new_registration' and app.parcel_id:
                 LandParcel.objects.filter(pk=app.parcel_id).update(status='registered')
                 self._create_deed_from_application(app, request.user)
+            _audit(request, 'submit_step3', 'application', app.id, app.application_number)
 
         app.refresh_from_db()
         return Response(ApplicationListSerializer(app, context={'request': request}).data)
 
     @staticmethod
     def _upsert_owner_from_application(app):
-        """Create or update an Owner from the primary proprietor as soon as an
-        application is submitted, so owners are visible before approval."""
         if app.application_type != 'new_registration':
             return
         primary = app.proprietors.filter(is_primary=True).first()
@@ -358,7 +447,20 @@ class TitleDeedViewSet(viewsets.ModelViewSet):
         return qs
 
     def perform_create(self, serializer):
-        serializer.save(registered_by=self.request.user)
+        instance = serializer.save(registered_by=self.request.user)
+        _audit(self.request, 'create', 'deed', instance.id, instance.deed_number)
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        _audit(self.request, 'update', 'deed', instance.id, instance.deed_number)
+
+    def destroy(self, request, *args, **kwargs):
+        obj = self.get_object()
+        _audit(request, 'delete_attempt', 'deed', obj.id, obj.deed_number)
+        return Response(
+            {'detail': 'Deleting records is not permitted.'},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
 
 
 # ── Application Types & Statuses ──────────────────────────────────────────────
@@ -371,6 +473,22 @@ class ApplicationTypeViewSet(viewsets.ModelViewSet):
     search_fields = ['code', 'label']
     ordering = ['display_order', 'label']
 
+    def perform_create(self, serializer):
+        instance = serializer.save()
+        _audit(self.request, 'create', 'application_type', instance.id, instance.label)
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        _audit(self.request, 'update', 'application_type', instance.id, instance.label)
+
+    def destroy(self, request, *args, **kwargs):
+        obj = self.get_object()
+        _audit(request, 'delete_attempt', 'application_type', obj.id, obj.label)
+        return Response(
+            {'detail': 'Deleting records is not permitted.'},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
+
 
 class ApplicationStatusViewSet(viewsets.ModelViewSet):
     queryset = ApplicationStatus.objects.all()
@@ -379,3 +497,44 @@ class ApplicationStatusViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['code', 'label']
     ordering = ['display_order', 'label']
+
+    def perform_create(self, serializer):
+        instance = serializer.save()
+        _audit(self.request, 'create', 'application_status', instance.id, instance.label)
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        _audit(self.request, 'update', 'application_status', instance.id, instance.label)
+
+    def destroy(self, request, *args, **kwargs):
+        obj = self.get_object()
+        _audit(request, 'delete_attempt', 'application_status', obj.id, obj.label)
+        return Response(
+            {'detail': 'Deleting records is not permitted.'},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
+
+
+# ── Audit Log ─────────────────────────────────────────────────────────────────
+
+class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = AuditLog.objects.select_related('user').all()
+    serializer_class = AuditLogSerializer
+    permission_classes = [IsAdmin]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['user__username', 'user__first_name', 'user__last_name', 'resource_label', 'resource_type', 'detail']
+    ordering_fields = ['timestamp']
+    ordering = ['-timestamp']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        action = self.request.query_params.get('action')
+        resource_type = self.request.query_params.get('resource_type')
+        user_id = self.request.query_params.get('user')
+        if action:
+            qs = qs.filter(action=action)
+        if resource_type:
+            qs = qs.filter(resource_type=resource_type)
+        if user_id:
+            qs = qs.filter(user_id=user_id)
+        return qs

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { users as usersApi, appTypes as appTypesApi, appStatuses as appStatusesApi } from '@/lib/api'
+import { users as usersApi, appTypes as appTypesApi, appStatuses as appStatusesApi, auditLog as auditLogApi } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatDate } from '@/lib/utils'
-import { Plus, Search, Pencil, Trash2, KeyRound, Loader2 } from 'lucide-react'
+import { Plus, Search, Pencil, KeyRound, Loader2, History } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Owners from './Owners'
 import Parcels from './Parcels'
@@ -37,6 +37,7 @@ const TABS = [
   { id: 'deeds', label: 'Register' },
   { id: 'app-types', label: 'Application Types' },
   { id: 'app-statuses', label: 'Application Statuses' },
+  { id: 'audit-log', label: 'Audit Log' },
 ]
 
 const EMPTY_FORM = { username: '', first_name: '', last_name: '', email: '', password: '', role: 'data_entry', phone: '' }
@@ -91,11 +92,6 @@ function UsersTab() {
       const d = err.response?.data
       setError(typeof d === 'object' ? Object.values(d).flat().join(' ') : 'An error occurred.')
     } finally { setSaving(false) }
-  }
-
-  const handleDelete = async (u) => {
-    if (!window.confirm(`Delete user "${u.username}"? This cannot be undone.`)) return
-    await usersApi.delete(u.id); load()
   }
 
   const handlePwSave = async (e) => {
@@ -162,7 +158,6 @@ function UsersTab() {
                 <TableCell className="text-right space-x-1">
                   <Button variant="ghost" size="icon" title="Edit" onClick={() => openEdit(u)}><Pencil className="h-4 w-4" /></Button>
                   <Button variant="ghost" size="icon" title="Reset password" onClick={() => openPw(u)}><KeyRound className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" title="Delete" onClick={() => handleDelete(u)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                 </TableCell>
               </TableRow>
             ))}
@@ -277,10 +272,6 @@ function ReferenceTab({ api: refApi, noun, columns }) {
   const openEdit = (row) => {
     setEditing(row); setForm({ code: row.code, label: row.label, display_order: row.display_order, is_active: row.is_active }); setError(''); setOpen(true)
   }
-  const handleDelete = async (row) => {
-    if (!window.confirm(`Delete "${row.label}"? This cannot be undone.`)) return
-    await refApi.delete(row.id); load()
-  }
   const handleSave = async (e) => {
     e.preventDefault(); setSaving(true); setError('')
     try {
@@ -327,7 +318,6 @@ function ReferenceTab({ api: refApi, noun, columns }) {
                 </TableCell>
                 <TableCell className="text-right space-x-1">
                   <Button variant="ghost" size="icon" title="Edit" onClick={() => openEdit(row)}><Pencil className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" title="Delete" onClick={() => handleDelete(row)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                 </TableCell>
               </TableRow>
             ))}
@@ -388,6 +378,155 @@ function AppStatusesTab() {
   return <ReferenceTab api={appStatusesApi} noun="Application Status" />
 }
 
+const ACTION_LABELS = {
+  login: 'Login',
+  create: 'Create',
+  update: 'Update',
+  delete_attempt: 'Delete Attempt',
+  submit_step1: 'Step 1 Submit',
+  submit_step2: 'Step 2 Submit',
+  submit_step3: 'Step 3 Approve',
+  return_application: 'Return',
+  set_password: 'Set Password',
+}
+
+const ACTION_BADGE = {
+  login: 'secondary',
+  create: 'success',
+  update: 'info',
+  delete_attempt: 'destructive',
+  submit_step1: 'secondary',
+  submit_step2: 'secondary',
+  submit_step3: 'success',
+  return_application: 'warning',
+  set_password: 'outline',
+}
+
+function AuditLogTab() {
+  const [data, setData] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [search, setSearch] = useState('')
+  const [actionFilter, setActionFilter] = useState('')
+  const [resourceFilter, setResourceFilter] = useState('')
+  const [nextUrl, setNextUrl] = useState(null)
+
+  const load = useCallback((append = false) => {
+    if (!append) setLoading(true)
+    setLoadError('')
+    const params = {
+      search: search || undefined,
+      action: actionFilter || undefined,
+      resource_type: resourceFilter || undefined,
+    }
+    auditLogApi.list(params)
+      .then((r) => {
+        const results = r.data.results || r.data
+        setData(append ? (prev) => [...prev, ...results] : results)
+        setNextUrl(r.data.next || null)
+      })
+      .catch(() => setLoadError('Failed to load audit log. Please refresh.'))
+      .finally(() => setLoading(false))
+  }, [search, actionFilter, resourceFilter])
+
+  useEffect(() => { load() }, [load])
+
+  const loadMore = () => {
+    if (!nextUrl) return
+    auditLogApi.getPage(nextUrl)
+      .then((r) => {
+        setData((prev) => [...prev, ...(r.data.results || r.data)])
+        setNextUrl(r.data.next || null)
+      })
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">Read-only log of all user actions</p>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <History className="h-3.5 w-3.5" />
+          {data.length} entries shown
+        </div>
+      </div>
+
+      <Card>
+        <CardContent className="p-4 flex flex-wrap gap-3">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search user, resource…" className="pl-9" value={search}
+              onChange={(e) => setSearch(e.target.value)} />
+          </div>
+          <Select value={actionFilter} onValueChange={setActionFilter}>
+            <SelectTrigger className="w-44"><SelectValue placeholder="All actions" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All actions</SelectItem>
+              {Object.entries(ACTION_LABELS).map(([v, l]) => (
+                <SelectItem key={v} value={v}>{l}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={resourceFilter} onValueChange={setResourceFilter}>
+            <SelectTrigger className="w-44"><SelectValue placeholder="All resources" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All resources</SelectItem>
+              {['application', 'parcel', 'owner', 'deed', 'user', 'application_type', 'application_status'].map((r) => (
+                <SelectItem key={r} value={r}>{r.replace(/_/g, ' ')}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Timestamp</TableHead>
+              <TableHead>User</TableHead>
+              <TableHead>Action</TableHead>
+              <TableHead>Resource</TableHead>
+              <TableHead>Label</TableHead>
+              <TableHead>Detail</TableHead>
+              <TableHead>IP</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? Array.from({ length: 6 }).map((_, i) => (
+              <TableRow key={i}>{Array.from({ length: 7 }).map((_, j) => <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>)}</TableRow>
+            )) : loadError ? (
+              <TableRow><TableCell colSpan={7} className="text-center text-destructive py-10">{loadError}</TableCell></TableRow>
+            ) : data.length === 0 ? (
+              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-10">No log entries found</TableCell></TableRow>
+            ) : data.map((entry) => (
+              <TableRow key={entry.id}>
+                <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                  {new Date(entry.timestamp).toLocaleString()}
+                </TableCell>
+                <TableCell className="font-mono text-sm">{entry.username || '—'}</TableCell>
+                <TableCell>
+                  <Badge variant={ACTION_BADGE[entry.action] || 'outline'} className="text-xs">
+                    {ACTION_LABELS[entry.action] || entry.action}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">{entry.resource_type}</TableCell>
+                <TableCell className="text-sm font-medium">{entry.resource_label || entry.resource_id || '—'}</TableCell>
+                <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">{entry.detail || '—'}</TableCell>
+                <TableCell className="text-xs text-muted-foreground font-mono">{entry.ip_address || '—'}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        {nextUrl && (
+          <div className="p-3 text-center border-t">
+            <Button variant="ghost" size="sm" onClick={loadMore}>Load more</Button>
+          </div>
+        )}
+      </Card>
+    </div>
+  )
+}
+
 export default function Admin() {
   const [tab, setTab] = useState('users')
 
@@ -421,6 +560,7 @@ export default function Admin() {
       {tab === 'deeds' && <Deeds />}
       {tab === 'app-types' && <AppTypesTab />}
       {tab === 'app-statuses' && <AppStatusesTab />}
+      {tab === 'audit-log' && <AuditLogTab />}
     </div>
   )
 }

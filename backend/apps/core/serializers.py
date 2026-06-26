@@ -4,7 +4,7 @@ from rest_framework import serializers
 from .models import (
     Owner, UserProfile, LandParcel, Application,
     Proprietor, ApplicationReview, ApplicationApproval, TitleDeed,
-    ApplicationType, ApplicationStatus,
+    ApplicationType, ApplicationStatus, AuditLog,
 )
 
 
@@ -344,3 +344,26 @@ class ApplicationStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = ApplicationStatus
         fields = ['id', 'code', 'label', 'is_active', 'display_order']
+
+
+# ── AuditLog ──────────────────────────────────────────────────────────────────
+
+class AuditLogSerializer(serializers.ModelSerializer):
+    username = serializers.SerializerMethodField()
+    user_full_name = serializers.SerializerMethodField()
+    action_display = serializers.CharField(source='get_action_display', read_only=True)
+
+    class Meta:
+        model = AuditLog
+        fields = [
+            'id', 'user', 'username', 'user_full_name',
+            'action', 'action_display',
+            'resource_type', 'resource_id', 'resource_label',
+            'detail', 'ip_address', 'timestamp',
+        ]
+
+    def get_username(self, obj):
+        return obj.user.username if obj.user else None
+
+    def get_user_full_name(self, obj):
+        return obj.user.get_full_name() or obj.user.username if obj.user else None

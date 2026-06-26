@@ -36,11 +36,11 @@ function StatCard({ title, value, icon: Icon, desc, color = 'bg-primary/10 text-
     </CardContent>
   )
   return to ? (
-    <Link to={to} className="block">
-      <Card className="hover:shadow-md transition-shadow cursor-pointer">{content}</Card>
+    <Link to={to} className="block h-full">
+      <Card className="h-full hover:shadow-md transition-shadow cursor-pointer">{content}</Card>
     </Link>
   ) : (
-    <Card>{content}</Card>
+    <Card className="h-full">{content}</Card>
   )
 }
 

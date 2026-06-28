@@ -823,6 +823,7 @@ export default function Applications() {
                     {selected.parcel_detail && (
                       <>
                         <Separator />
+                        <p className="text-xs font-semibold text-muted-foreground uppercase">Property Info</p>
                         <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                           {selected.parcel_detail.zupin && <Field label="ZUPIN" value={selected.parcel_detail.zupin} />}
                           {selected.parcel_detail.house_number && <Field label="House No." value={selected.parcel_detail.house_number} />}

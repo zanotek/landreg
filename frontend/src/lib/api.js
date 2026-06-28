@@ -113,6 +113,10 @@ export const applications = {
   delete: (id) => api.delete(`/applications/${id}/`),
 }
 
+export const transactions = {
+  list: (params) => api.get('/applications/transactions/', { params }),
+}
+
 export const auditLog = {
   list: (params) => api.get('/audit-log/', { params }),
   getPage: (url) => api.get(url),

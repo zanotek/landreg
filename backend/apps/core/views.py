@@ -289,6 +289,30 @@ class ApplicationViewSet(viewsets.ModelViewSet):
             status=status.HTTP_405_METHOD_NOT_ALLOWED,
         )
 
+    @action(detail=False, methods=['get'], url_path='transactions')
+    def transactions(self, request):
+        """Return all approved non-new_registration applications as transaction history."""
+        TRANSACTION_TYPES = ['transfer', 'subdivision', 'mortgage', 'correction']
+        qs = self.get_queryset().filter(
+            status='approved',
+            application_type__in=TRANSACTION_TYPES,
+        )
+        app_type = request.query_params.get('application_type')
+        if app_type and app_type in TRANSACTION_TYPES:
+            qs = qs.filter(application_type=app_type)
+        search = request.query_params.get('search', '').strip()
+        if search:
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(application_number__icontains=search) |
+                Q(parcel__parcel_number__icontains=search) |
+                Q(proprietors__full_name__icontains=search) |
+                Q(proprietors__national_id__icontains=search)
+            ).distinct()
+        qs = qs.order_by('-updated_at')
+        serializer = ApplicationListSerializer(qs, many=True, context={'request': request})
+        return Response(serializer.data)
+
     @action(detail=True, methods=['patch'], url_path='submit-step1')
     def submit_step1(self, request, pk=None):
         """Data Entry Officer submits Step 1, advancing to Step 2."""

@@ -3,7 +3,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import {
-  LayoutDashboard, ClipboardList, LogOut, Building2, Users, MapPin, FileText, ShieldCheck,
+  LayoutDashboard, ClipboardList, LogOut, Building2, Users, MapPin, FileText, ShieldCheck, History,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -20,6 +20,7 @@ const navItems = [
   { to: '/owners', label: 'Owners', icon: Users },
   { to: '/parcels', label: 'Parcels', icon: MapPin },
   { to: '/deeds', label: 'Register', icon: FileText, hideForRoles: ['data_entry'] },
+  { to: '/transactions', label: 'Transactions', icon: History, hideForRoles: ['data_entry'] },
   { to: '/admin', label: 'Admin Panel', icon: ShieldCheck, allowedRoles: ['admin'] },
 ]
 

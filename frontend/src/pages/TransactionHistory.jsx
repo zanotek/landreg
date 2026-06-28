@@ -3,17 +3,16 @@ import { useSearchParams } from 'react-router-dom'
 import { transactions as txApi } from '@/lib/api'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
 import { formatDate } from '@/lib/utils'
-import { Search } from 'lucide-react'
+import { Search, User, MapPin } from 'lucide-react'
 
 const TYPES = [
+  ['new_registration', 'New Registration'],
   ['transfer', 'Transfer of Ownership'],
   ['subdivision', 'Subdivision & Amalgamation'],
   ['mortgage', 'Mortgage & Charge'],
@@ -21,10 +20,19 @@ const TYPES = [
 ]
 
 const TYPE_BADGE = {
+  new_registration: 'success',
   transfer: 'info',
   subdivision: 'secondary',
   mortgage: 'warning',
   correction: 'outline',
+}
+
+const TYPE_DOT = {
+  new_registration: 'bg-green-500',
+  transfer: 'bg-blue-500',
+  subdivision: 'bg-purple-500',
+  mortgage: 'bg-yellow-500',
+  correction: 'bg-gray-400',
 }
 
 function Field({ label, value }) {
@@ -38,9 +46,7 @@ function Field({ label, value }) {
 }
 
 function SectionHeading({ children }) {
-  return (
-    <p className="text-xs font-semibold text-muted-foreground uppercase">{children}</p>
-  )
+  return <p className="text-xs font-semibold text-muted-foreground uppercase">{children}</p>
 }
 
 function TransactionDetailModal({ tx, onClose }) {
@@ -66,7 +72,6 @@ function TransactionDetailModal({ tx, onClose }) {
         </DialogHeader>
 
         <div className="space-y-4 mt-2">
-          {/* Application info */}
           <div className="grid grid-cols-2 gap-x-4 gap-y-3">
             <Field label="Type" value={tx.application_type_display} />
             {tx.description && <Field label="Description" value={tx.description} />}
@@ -150,6 +155,75 @@ function TransactionDetailModal({ tx, onClose }) {
   )
 }
 
+function TimelineEntry({ tx, index, isLast, onClick }) {
+  const primary = tx.proprietors?.find((p) => p.is_primary)
+  const coProps = tx.proprietors?.filter((p) => !p.is_primary) || []
+  const dot = TYPE_DOT[tx.application_type] || 'bg-gray-400'
+
+  return (
+    <div className="relative flex gap-4">
+      {/* Spine */}
+      <div className="flex flex-col items-center">
+        <div className={`w-3 h-3 rounded-full mt-1.5 shrink-0 z-10 ${dot}`} />
+        {!isLast && <div className="w-px flex-1 bg-border mt-1" />}
+      </div>
+
+      {/* Card */}
+      <div
+        className="flex-1 mb-4 rounded-lg border bg-card p-4 cursor-pointer hover:bg-accent/40 transition-colors"
+        onClick={onClick}
+      >
+        {/* Header row */}
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          <span className="text-xs text-muted-foreground font-medium w-5 text-center">
+            {index + 1}.
+          </span>
+          <Badge variant={TYPE_BADGE[tx.application_type] || 'outline'}>
+            {tx.application_type_display}
+          </Badge>
+          <span className="text-xs text-muted-foreground">
+            {formatDate(tx.approval?.approved_at || tx.updated_at)}
+          </span>
+          <span className="text-xs font-mono text-muted-foreground ml-auto">
+            {tx.application_number}
+          </span>
+        </div>
+
+        {/* Proprietors */}
+        <div className="space-y-1.5">
+          {primary && (
+            <div className="flex items-center gap-2">
+              <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <span className="text-sm font-medium">{primary.full_name}</span>
+              <span className="text-xs text-muted-foreground font-mono">{primary.national_id}</span>
+              {coProps.length > 0 && (
+                <span className="text-xs text-muted-foreground">(primary)</span>
+              )}
+            </div>
+          )}
+          {coProps.map((p) => (
+            <div key={p.id} className="flex items-center gap-2 pl-1">
+              <User className="h-3 w-3 text-muted-foreground shrink-0" />
+              <span className="text-sm text-muted-foreground">{p.full_name}</span>
+              <span className="text-xs text-muted-foreground font-mono">{p.national_id}</span>
+            </div>
+          ))}
+          {!primary && !coProps.length && (
+            <p className="text-xs text-muted-foreground italic">No proprietor recorded</p>
+          )}
+        </div>
+
+        {/* CRO ref if available */}
+        {tx.review?.registration_number && (
+          <p className="text-xs text-muted-foreground mt-2 font-mono">
+            CRO: {tx.review.registration_number}
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function TransactionHistory() {
   const [searchParams] = useSearchParams()
   const [data, setData] = useState([])
@@ -173,12 +247,21 @@ export default function TransactionHistory() {
 
   useEffect(() => { load() }, [load])
 
+  // Group entries by parcel, preserving chronological order within each group
+  const groups = data.reduce((acc, tx) => {
+    const key = tx.parcel_number || tx.parcel_number_requested || '—'
+    if (!acc[key]) acc[key] = []
+    acc[key].push(tx)
+    return acc
+  }, {})
+  const parcelKeys = Object.keys(groups)
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Transaction History</h1>
         <p className="text-muted-foreground mt-1">
-          Approved transfers, subdivisions, mortgages, and corrections
+          Ownership chain per parcel — registrations, transfers, mortgages, and more
         </p>
       </div>
 
@@ -187,14 +270,14 @@ export default function TransactionHistory() {
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search application, parcel, proprietor…"
+              placeholder="Search parcel, proprietor, application…"
               className="pl-9"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
           <Select value={filterType} onValueChange={setFilterType}>
-            <SelectTrigger className="w-52">
+            <SelectTrigger className="w-56">
               <SelectValue placeholder="All types" />
             </SelectTrigger>
             <SelectContent>
@@ -205,69 +288,53 @@ export default function TransactionHistory() {
         </CardContent>
       </Card>
 
-      <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Application No.</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Parcel</TableHead>
-              <TableHead>Primary Proprietor</TableHead>
-              <TableHead>CRO / Ref</TableHead>
-              <TableHead>Approved By</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? Array.from({ length: 5 }).map((_, i) => (
-              <TableRow key={i}>
-                {Array.from({ length: 7 }).map((_, j) => (
-                  <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
-                ))}
-              </TableRow>
-            )) : loadError ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center text-destructive py-10">{loadError}</TableCell>
-              </TableRow>
-            ) : data.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
-                  No transactions found
-                </TableCell>
-              </TableRow>
-            ) : data.map((tx) => {
-              const primary = tx.proprietors?.find((p) => p.is_primary)
-              return (
-                <TableRow
-                  key={tx.id}
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => setSelected(tx)}
-                >
-                  <TableCell className="text-sm text-muted-foreground">
-                    {formatDate(tx.approval?.approved_at || tx.updated_at)}
-                  </TableCell>
-                  <TableCell className="font-mono font-medium">{tx.application_number}</TableCell>
-                  <TableCell>
-                    <Badge variant={TYPE_BADGE[tx.application_type] || 'outline'}>
-                      {tx.application_type_display}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="font-mono text-sm">
-                    {tx.parcel_number || tx.parcel_number_requested || '—'}
-                  </TableCell>
-                  <TableCell className="font-medium">{primary?.full_name || '—'}</TableCell>
-                  <TableCell className="font-mono text-sm text-muted-foreground">
-                    {tx.review?.registration_number || '—'}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {tx.approval?.approved_by_name || '—'}
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
-      </Card>
+      {loading ? (
+        <div className="space-y-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-4 space-y-3">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : loadError ? (
+        <p className="text-center text-destructive py-10">{loadError}</p>
+      ) : parcelKeys.length === 0 ? (
+        <p className="text-center text-muted-foreground py-10">No transactions found</p>
+      ) : (
+        <div className="space-y-6">
+          {parcelKeys.map((parcel) => {
+            const entries = groups[parcel]
+            return (
+              <Card key={parcel}>
+                <CardHeader className="pb-2 pt-4 px-4">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-mono">{parcel}</span>
+                    <span className="text-muted-foreground font-normal text-xs ml-1">
+                      {entries.length} transaction{entries.length !== 1 ? 's' : ''}
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-4 pb-2">
+                  {entries.map((tx, i) => (
+                    <TimelineEntry
+                      key={tx.id}
+                      tx={tx}
+                      index={i}
+                      isLast={i === entries.length - 1}
+                      onClick={() => setSelected(tx)}
+                    />
+                  ))}
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      )}
 
       <TransactionDetailModal tx={selected} onClose={() => setSelected(null)} />
     </div>

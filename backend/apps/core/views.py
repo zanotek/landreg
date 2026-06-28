@@ -291,14 +291,11 @@ class ApplicationViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='transactions')
     def transactions(self, request):
-        """Return all approved non-new_registration applications as transaction history."""
-        TRANSACTION_TYPES = ['transfer', 'subdivision', 'mortgage', 'correction']
-        qs = self.get_queryset().filter(
-            status='approved',
-            application_type__in=TRANSACTION_TYPES,
-        )
+        """Return all approved applications as ownership chain history, ordered chronologically."""
+        ALL_TYPES = ['new_registration', 'transfer', 'subdivision', 'mortgage', 'correction']
+        qs = self.get_queryset().filter(status='approved', application_type__in=ALL_TYPES)
         app_type = request.query_params.get('application_type')
-        if app_type and app_type in TRANSACTION_TYPES:
+        if app_type and app_type in ALL_TYPES:
             qs = qs.filter(application_type=app_type)
         search = request.query_params.get('search', '').strip()
         if search:
@@ -309,7 +306,7 @@ class ApplicationViewSet(viewsets.ModelViewSet):
                 Q(proprietors__full_name__icontains=search) |
                 Q(proprietors__national_id__icontains=search)
             ).distinct()
-        qs = qs.order_by('-updated_at')
+        qs = qs.order_by('parcel__parcel_number', 'approval__approved_at', 'updated_at')
         serializer = ApplicationListSerializer(qs, many=True, context={'request': request})
         return Response(serializer.data)
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { transactions as txApi } from '@/lib/api'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -150,9 +151,10 @@ function TransactionDetailModal({ tx, onClose }) {
 }
 
 export default function TransactionHistory() {
+  const [searchParams] = useSearchParams()
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(() => searchParams.get('search') || '')
   const [filterType, setFilterType] = useState('all')
   const [loadError, setLoadError] = useState('')
   const [selected, setSelected] = useState(null)

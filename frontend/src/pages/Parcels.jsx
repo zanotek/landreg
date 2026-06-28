@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatDate, formatArea } from '@/lib/utils'
-import { Plus, Search, Pencil, Loader2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Plus, Search, Pencil, Loader2, History } from 'lucide-react'
 
 const DISTRICTS = [
   ['mjini', 'Mjini (Urban West)'], ['magharibi', 'Magharibi (West)'],
@@ -59,6 +60,8 @@ export default function Parcels() {
   const [form, setForm] = useState(EMPTY)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  const navigate = useNavigate()
 
   const load = useCallback(() => {
     setLoading(true)
@@ -166,6 +169,10 @@ export default function Parcels() {
                 </TableCell>
                 <TableCell className="text-muted-foreground text-sm">{formatDate(p.created_at)}</TableCell>
                 <TableCell className="text-right space-x-2">
+                  <Button variant="ghost" size="icon" title="Transaction history"
+                    onClick={() => navigate(`/transactions?search=${encodeURIComponent(p.parcel_number)}`)}>
+                    <History className="h-4 w-4" />
+                  </Button>
                   <Button variant="ghost" size="icon" onClick={() => openEdit(p)}>
                     <Pencil className="h-4 w-4" />
                   </Button>
